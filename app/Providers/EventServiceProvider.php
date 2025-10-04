@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Tenant;
+use App\Observers\TenantObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -25,7 +27,12 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Tenant::observe(TenantObserver::class);
+
+        Event::listen(function (\SocialiteProviders\Manager\SocialiteWasCalled $event) {
+            $event->extendSocialite('kakao', \SocialiteProviders\Kakao\KakaoProvider::class);
+            $event->extendSocialite('naver', \SocialiteProviders\Naver\Provider::class);
+        });
     }
 
     /**
