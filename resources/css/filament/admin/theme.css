@@ -1,0 +1,6 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+/* Change page background from gray to white */
+:where(.fi-body) {
+    background-color: #ffffff !important;
+}

@@ -14,10 +14,6 @@ class TenantsTable
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('branch.name')
-                    ->label('지점')
-                    ->searchable()
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('name')
                     ->label('이름')
                     ->searchable()
@@ -91,9 +87,6 @@ class TenantsTable
                     ->falseColor('success'),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('branch_id')
-                    ->label('지점')
-                    ->relationship('branch', 'name'),
                 Tables\Filters\SelectFilter::make('payment_status')
                     ->label('납부 상태')
                     ->options([

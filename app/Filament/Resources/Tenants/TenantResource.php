@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class TenantResource extends Resource
 {
@@ -34,6 +35,20 @@ class TenantResource extends Resource
     public static function table(Table $table): Table
     {
         return TenantsTable::configure($table);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        // 세션에서 선택된 지점으로 필터링
+        $branchId = session('current_branch_id');
+
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
+        return $query;
     }
 
     public static function getRelations(): array

@@ -15,28 +15,18 @@ class ListTenants extends Page
 
     protected string $view = 'filament.resources.tenants.pages.list-tenants';
 
-    public function getTabs(): array
+    public function getHeading(): string
     {
-        $tabs = ['all' => Tab::make('전체')];
+        $branchId = session('current_branch_id');
+        $branch = Branch::find($branchId);
 
-        $branches = Branch::where('user_id', auth()->id())
-            ->orderBy('name')
-            ->get();
-
-        foreach ($branches as $branch) {
-            $tabs[$branch->id] = Tab::make($branch->name)
-                ->badge(fn () => $branch->rooms()->count());
-        }
-
-        return $tabs;
+        return $branch ? "{$branch->name} 일정 관리" : '일정 관리';
     }
-
-    public ?string $activeTab = 'all';
 
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            // 일정 관리 페이지에는 생성 버튼이 필요 없을 수 있음
         ];
     }
 }

@@ -53,6 +53,39 @@ Route::middleware([
         return response()->json(['success' => true]);
     })->name('tenants.update-dates');
 
+    // Branch switching endpoint
+    Route::get('/admin/switch-branch/{branch}', function (\App\Models\Branch $branch) {
+        $user = auth()->user();
+
+        if ($user->branches->contains($branch)) {
+            session(['current_branch_id' => $branch->id]);
+        }
+
+        return redirect()->back();
+    })->name('filament.admin.pages.switch-branch');
+
+    // Branch add endpoint
+    Route::post('/admin/add-branch', function () {
+        $validated = request()->validate([
+            'name' => 'required|string|max:255',
+            'address' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:255',
+        ]);
+
+        $branch = auth()->user()->branches()->create([
+            'name' => $validated['name'],
+            'address' => $validated['address'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'start_floor' => 1,
+            'end_floor' => 1,
+        ]);
+
+        // Set as current branch
+        session(['current_branch_id' => $branch->id]);
+
+        return response()->json(['success' => true, 'branch' => $branch]);
+    })->name('filament.admin.pages.add-branch');
+
     // Tenant quick create endpoint (for modal)
     Route::post('/admin/tenants/quick-create', function () {
         $validated = request()->validate([

@@ -12,6 +12,8 @@ class TenantScheduler extends Component
 {
     public $currentYear;
     public $currentMonth;
+    public $startDate; // 시작 날짜 (YYYY-MM-DD)
+    public $endDate;   // 종료 날짜 (YYYY-MM-DD)
     public $days = [];
     public $rooms = [];
     public $tenants = [];
@@ -25,9 +27,18 @@ class TenantScheduler extends Component
 
     public function mount($branchId = null)
     {
-        $this->branchId = $branchId;
+        // 세션에서 선택된 지점 가져오기
+        $this->branchId = session('current_branch_id', $branchId);
         $this->currentYear = now()->year;
         $this->currentMonth = now()->month;
+
+        // 초기 범위: 이전달 1일 ~ 다음달 말일 (3개월)
+        $previousMonth = Carbon::create($this->currentYear, $this->currentMonth, 1)->subMonth();
+        $nextMonth = Carbon::create($this->currentYear, $this->currentMonth, 1)->addMonth();
+
+        $this->startDate = $previousMonth->format('Y-m-d');
+        $this->endDate = $nextMonth->endOfMonth()->format('Y-m-d');
+
         $this->loadData();
     }
 
@@ -40,18 +51,23 @@ class TenantScheduler extends Component
 
     public function generateCalendarDays()
     {
-        $startDate = Carbon::create($this->currentYear, $this->currentMonth, 1);
-        $daysInMonth = $startDate->daysInMonth;
+        $start = Carbon::parse($this->startDate);
+        $end = Carbon::parse($this->endDate);
+        $today = now()->format('Y-m-d');
 
         $this->days = [];
-        for ($day = 1; $day <= $daysInMonth; $day++) {
-            $date = Carbon::create($this->currentYear, $this->currentMonth, $day);
+
+        $current = $start->copy();
+        while ($current->lte($end)) {
             $this->days[] = [
-                'day' => $day,
-                'date' => $date->format('Y-m-d'),
-                'dayOfWeek' => $date->dayOfWeek, // 0 = 일요일, 6 = 토요일
-                'isWeekend' => $date->isWeekend(),
+                'day' => $current->day,
+                'date' => $current->format('Y-m-d'),
+                'dayOfWeek' => $current->dayOfWeek,
+                'isWeekend' => $current->isWeekend(),
+                'isToday' => $current->format('Y-m-d') === $today,
+                'month' => $current->format('n'),
             ];
+            $current->addDay();
         }
     }
 
@@ -218,6 +234,54 @@ class TenantScheduler extends Component
     public function editTenant($tenantId)
     {
         return redirect()->route('filament.admin.resources.tenants.edit', ['record' => $tenantId]);
+    }
+
+    public function moveTenantToRoom($tenantId, $newRoomId)
+    {
+        $tenant = Tenant::findOrFail($tenantId);
+        $newRoom = Room::findOrFail($newRoomId);
+
+        // 같은 호실이면 아무것도 하지 않음
+        if ($tenant->room_id == $newRoomId) {
+            return;
+        }
+
+        // 입주자의 호실 변경
+        $tenant->update([
+            'room_id' => $newRoomId,
+            'room_number' => $newRoom->room_number,
+        ]);
+
+        // 데이터 새로고침
+        $this->loadData();
+    }
+
+    public function loadMorePrevious()
+    {
+        // 현재 시작일에서 1개월 이전 추가
+        $currentStart = Carbon::parse($this->startDate);
+        $newStart = $currentStart->copy()->subMonth()->startOfMonth();
+
+        $this->startDate = $newStart->format('Y-m-d');
+        $this->loadData();
+
+        return [
+            'scrollTarget' => $currentStart->format('Y-m-d'), // 이전 시작일로 스크롤
+        ];
+    }
+
+    public function loadMoreNext()
+    {
+        // 현재 종료일에서 1개월 이후 추가
+        $currentEnd = Carbon::parse($this->endDate);
+        $newEnd = $currentEnd->copy()->addMonth()->endOfMonth();
+
+        $this->endDate = $newEnd->format('Y-m-d');
+        $this->loadData();
+
+        return [
+            'scrollTarget' => $currentEnd->format('Y-m-d'), // 이전 종료일로 스크롤
+        ];
     }
 
     public function render()

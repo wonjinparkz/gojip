@@ -1,6 +1,6 @@
 <div
     class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer"
-    wire:click="mountTableAction('edit', '{{ $getRecord()->getKey() }}')"
+    wire:click="mountTableAction('view', '{{ $getRecord()->getKey() }}')"
 >
     <!-- Card Header -->
     <div class="mb-3">

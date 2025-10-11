@@ -15,10 +15,6 @@ class TenantManagementTable
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('branch.name')
-                    ->label('지점')
-                    ->searchable()
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('name')
                     ->label('이름')
                     ->searchable()
@@ -70,9 +66,6 @@ class TenantManagementTable
                     ->falseColor('success'),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('branch_id')
-                    ->label('지점')
-                    ->relationship('branch', 'name', fn (Builder $query) => $query->where('user_id', auth()->id())),
                 Tables\Filters\SelectFilter::make('gender')
                     ->label('성별')
                     ->options([

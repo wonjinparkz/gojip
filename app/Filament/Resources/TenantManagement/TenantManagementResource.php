@@ -55,9 +55,18 @@ class TenantManagementResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->whereHas('branch', function (Builder $query) {
                 $query->where('user_id', auth()->id());
             });
+
+        // 세션에서 선택된 지점으로 필터링
+        $branchId = session('current_branch_id');
+
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
+        return $query;
     }
 }

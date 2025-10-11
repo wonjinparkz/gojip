@@ -3,6 +3,10 @@
     dragStartRoomId: null,
     dragStartDate: null,
     dragEndDate: null,
+    dragEndRoomId: null,
+    barDragging: false,
+    draggedTenantId: null,
+    draggedBarStartRoom: null,
 
     startDrag(roomId, date, event) {
         // 박스나 리사이즈 핸들을 클릭한 경우 셀 드래그 비활성화
@@ -15,33 +19,57 @@
         this.dragStartRoomId = roomId;
         this.dragStartDate = date;
         this.dragEndDate = date;
+        this.dragEndRoomId = roomId;
     },
 
     onDrag(roomId, date) {
-        if (!this.isDragging || this.dragStartRoomId !== roomId) return;
+        if (!this.isDragging) return;
         this.dragEndDate = date;
+        this.dragEndRoomId = roomId;
     },
 
     endDrag() {
         if (this.isDragging && this.dragStartRoomId && this.dragStartDate && this.dragEndDate) {
             const startDate = this.dragStartDate < this.dragEndDate ? this.dragStartDate : this.dragEndDate;
             const endDate = this.dragStartDate > this.dragEndDate ? this.dragStartDate : this.dragEndDate;
-            $wire.openCreateModal(this.dragStartRoomId, startDate, endDate);
+            $wire.openCreateModal(this.dragEndRoomId || this.dragStartRoomId, startDate, endDate);
         }
         this.isDragging = false;
         this.dragStartRoomId = null;
         this.dragStartDate = null;
         this.dragEndDate = null;
+        this.dragEndRoomId = null;
     },
 
     isInDragRange(roomId, date) {
-        if (!this.isDragging || this.dragStartRoomId !== roomId) return false;
+        if (!this.isDragging) return false;
+
+        // 같은 호실이거나 드래그 중인 호실인 경우만 하이라이트
+        if (roomId !== this.dragStartRoomId && roomId !== this.dragEndRoomId) return false;
+
         const start = this.dragStartDate < this.dragEndDate ? this.dragStartDate : this.dragEndDate;
         const end = this.dragStartDate > this.dragEndDate ? this.dragStartDate : this.dragEndDate;
         return date >= start && date <= end;
+    },
+
+    startBarDrag(tenantId, roomId) {
+        this.barDragging = true;
+        this.draggedTenantId = tenantId;
+        this.draggedBarStartRoom = roomId;
+    },
+
+    endBarDrag(roomId) {
+        if (this.barDragging && this.draggedTenantId && roomId !== this.draggedBarStartRoom) {
+            $wire.moveTenantToRoom(this.draggedTenantId, roomId);
+        }
+        this.barDragging = false;
+        this.draggedTenantId = null;
+        this.draggedBarStartRoom = null;
     }
 }"
     @mouseup.window="endDrag()"
+    @bar-drag-start.window="startBarDrag($event.detail.tenantId, $event.detail.roomId)"
+    @mouseup.window="if (barDragging) { barDragging = false; draggedTenantId = null; draggedBarStartRoom = null; }"
     @tenant-created.window="console.log('tenant-created 이벤트 수신'); $wire.$refresh()"
     x-init="console.log('TenantScheduler 초기화:', { branchId: '{{ $branchId }}', tenants: @js($tenants) })">
     <!-- Scheduler Container -->
@@ -71,17 +99,110 @@
         </div>
 
         <!-- Scheduler Table -->
-        <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow-x: auto; position: relative; isolation: isolate;">
-            <table style="width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1200px; position: relative;">
+        <div id="scheduler-container"
+             style="border: 1px solid #e5e7eb; border-radius: 8px; overflow-x: auto; position: relative; isolation: isolate;"
+             x-data="{
+                isLoading: false,
+                scrollToDate(dateStr) {
+                    $nextTick(() => {
+                        const selector = '[data-date=' + String.fromCharCode(34) + dateStr + String.fromCharCode(34) + ']';
+                        const targetCell = this.$el.querySelector(selector);
+                        if (targetCell) {
+                            const containerWidth = this.$el.clientWidth;
+                            const cellLeft = targetCell.offsetLeft;
+                            const cellWidth = targetCell.offsetWidth;
+                            this.$el.scrollLeft = cellLeft - (containerWidth / 2) + (cellWidth / 2);
+                        }
+                    });
+                }
+             }"
+             @scroll.debounce.150ms="
+                const scrollLeft = $el.scrollLeft;
+                const scrollWidth = $el.scrollWidth;
+                const clientWidth = $el.clientWidth;
+
+                // 왼쪽 끝에 도달 (100px 여유)
+                if (scrollLeft < 100 && !isLoading) {
+                    isLoading = true;
+                    const currentScrollLeft = scrollLeft;
+                    $wire.loadMorePrevious().then((result) => {
+                        if (result && result.scrollTarget) {
+                            scrollToDate(result.scrollTarget);
+                        }
+                        isLoading = false;
+                    });
+                }
+
+                // 오른쪽 끝에 도달 (100px 여유)
+                if (scrollLeft + clientWidth > scrollWidth - 100 && !isLoading) {
+                    isLoading = true;
+                    $wire.loadMoreNext().then((result) => {
+                        if (result && result.scrollTarget) {
+                            scrollToDate(result.scrollTarget);
+                        }
+                        isLoading = false;
+                    });
+                }
+             "
+             x-init="
+                // 현재 날짜 셀로 스크롤
+                $nextTick(() => {
+                    const todayCell = $el.querySelector('[data-is-today=true]');
+                    if (todayCell) {
+                        const containerWidth = $el.clientWidth;
+                        const cellLeft = todayCell.offsetLeft;
+                        const cellWidth = todayCell.offsetWidth;
+                        // 현재 날짜를 중앙에 위치
+                        $el.scrollLeft = cellLeft - (containerWidth / 2) + (cellWidth / 2);
+                    }
+                });
+             ">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1200px;">
                 <!-- Header: Days -->
                 <thead>
+                    <!-- Month Row -->
                     <tr>
-                        <th style="position: sticky; left: 0; z-index: 20; background-color: #F9FBFC; padding: 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; text-align: left; min-width: 100px;">
+                        <th rowspan="2" style="position: sticky; left: 0; z-index: 20; background-color: #F9FBFC; padding: 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; text-align: left; min-width: 100px;">
                             호실
                         </th>
+                        @php
+                            $monthGroups = [];
+                            $currentMonth = null;
+                            $monthStart = 0;
+
+                            foreach($days as $index => $day) {
+                                if ($currentMonth !== $day['month']) {
+                                    if ($currentMonth !== null) {
+                                        $monthGroups[] = [
+                                            'month' => $currentMonth,
+                                            'colspan' => $index - $monthStart
+                                        ];
+                                    }
+                                    $currentMonth = $day['month'];
+                                    $monthStart = $index;
+                                }
+                            }
+                            // 마지막 월 추가
+                            if ($currentMonth !== null) {
+                                $monthGroups[] = [
+                                    'month' => $currentMonth,
+                                    'colspan' => count($days) - $monthStart
+                                ];
+                            }
+                        @endphp
+
+                        @foreach($monthGroups as $group)
+                            <th colspan="{{ $group['colspan'] }}" style="padding: 8px 4px; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; text-align: center; font-size: 14px; background-color: #F9FBFC;">
+                                {{ $group['month'] }}월
+                            </th>
+                        @endforeach
+                    </tr>
+
+                    <!-- Day Row -->
+                    <tr>
                         @foreach($days as $day)
-                            <th style="padding: 8px 4px; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; text-align: center; min-width: 40px; font-size: 12px;
-                                {{ $day['dayOfWeek'] == 6 ? 'background-color: #dbeafe;' : ($day['dayOfWeek'] == 0 ? 'background-color: #fee2e2;' : 'background-color: #F9FBFC;') }}">
+                            <th data-is-today="{{ $day['isToday'] ? 'true' : 'false' }}" style="padding: 8px 4px; border: 1px solid #e5e7eb; font-weight: 600; text-align: center; min-width: 40px; font-size: 12px;
+                                {{ $day['isToday'] ? 'background-color: rgba(45, 212, 191, 0.2); color: #2dd4bf;' : ($day['dayOfWeek'] == 6 ? 'background-color: #dbeafe; color: #374151;' : ($day['dayOfWeek'] == 0 ? 'background-color: #fee2e2; color: #374151;' : 'background-color: #F9FBFC; color: #374151;')) }}">
                                 {{ $day['day'] }}
                             </th>
                         @endforeach
@@ -93,7 +214,15 @@
                     @foreach($rooms as $room)
                         <tr>
                             <!-- Room Header -->
-                            <td style="position: sticky; left: 0; z-index: 10; background-color: #F9FBFC; padding: 12px; border: 1px solid #e5e7eb; font-weight: 500; color: #374151; isolation: isolate;">
+                            <td @mouseup="endBarDrag({{ $room['id'] }})"
+                                :class="barDragging && draggedBarStartRoom !== {{ $room['id'] }} ? 'room-drop-target' : ''"
+                                style="position: sticky; left: 0; z-index: 60; padding: 12px; border: 1px solid #e5e7eb; font-weight: 500; color: #374151; isolation: isolate; min-height: 60px; height: 60px; vertical-align: middle; background-color: #F9FBFC;">
+                                <style>
+                                    .room-drop-target {
+                                        background-color: #e0f2fe !important;
+                                        cursor: copy !important;
+                                    }
+                                </style>
                                 {{ $room['room_number'] }}호
                             </td>
 
@@ -102,21 +231,13 @@
                                 @php
                                     // 이 날짜에 이 호실에 해당하는 입주자 찾기
                                     $matchedTenant = null;
+                                    $isStartOutsideRange = false; // 표시 범위 밖에서 시작된 일정인지
 
                                     foreach ($tenants as $t) {
-                                        // 디버깅: room_id 비교 (첫 번째 날짜만)
-                                        if ($dayIndex == 0) {
-                                            \Log::info("Room ID 비교 - Room: {$room['id']}, Tenant: {$t['name']}, Tenant Room: {$t['room_id']}, Match: " . ($t['room_id'] == $room['id'] ? 'YES' : 'NO'));
-                                        }
-
                                         if ($t['room_id'] != $room['id']) continue;
 
                                         $dateMatch = $day['date'] >= $t['move_in_date'] &&
                                                ($t['move_out_date'] === null || $day['date'] <= $t['move_out_date']);
-
-                                        if ($dateMatch && $dayIndex == 0) {
-                                            \Log::info("날짜 매칭 성공 - Day: {$day['date']}, Move In: {$t['move_in_date']}, Move Out: {$t['move_out_date']}");
-                                        }
 
                                         if ($dateMatch) {
                                             $matchedTenant = $t;
@@ -129,44 +250,51 @@
                                     // 입주 시작일인지 확인
                                     $isStart = $tenant && $day['date'] == $tenant['move_in_date'];
 
-                                    if ($isStart) {
-                                        \Log::info("입주 시작일 발견! - Room: {$room['room_number']}, Tenant: {$tenant['name']}, Date: {$day['date']}");
+                                    // 첫 번째 날짜인데 입주자가 있지만 시작일이 아니면, 범위 밖에서 시작된 것
+                                    if ($dayIndex == 0 && $tenant && !$isStart) {
+                                        $isStartOutsideRange = true;
+                                        $isStart = true; // 박스를 그리기 위해 시작으로 처리
                                     }
                                 @endphp
 
                                 <td wire:key="cell-{{ $room['id'] }}-{{ $day['date'] }}"
                                     style="padding: 0 !important;
                                            border: 1px solid #e5e7eb;
-                                           height: 40px;
+                                           height: 60px !important;
+                                           min-height: 60px !important;
+                                           max-height: 60px !important;
                                            width: 40px;
                                            min-width: 40px;
                                            max-width: 40px;"
-                                    :style="isInDragRange({{ $room['id'] }}, '{{ $day['date'] }}') ? 'background-color: #a5f3fc !important;' : '{{ $day['dayOfWeek'] == 6 ? 'background-color: #dbeafe;' : ($day['dayOfWeek'] == 0 ? 'background-color: #fee2e2;' : 'background-color: white;') }}'"
+                                    :style="isInDragRange({{ $room['id'] }}, '{{ $day['date'] }}') ? 'background-color: #a5f3fc !important;' : '{{ $day['isToday'] ? 'background-color: rgba(45, 212, 191, 0.2);' : ($day['dayOfWeek'] == 6 ? 'background-color: #dbeafe;' : ($day['dayOfWeek'] == 0 ? 'background-color: #fee2e2;' : 'background-color: white;')) }}'"
+                                    @mousedown="startDrag({{ $room['id'] }}, '{{ $day['date'] }}', $event)"
+                                    @mouseenter="onDrag({{ $room['id'] }}, '{{ $day['date'] }}')"
+                                    @mouseup="endBarDrag({{ $room['id'] }})"
                                     data-room-id="{{ $room['id'] }}"
                                     data-date="{{ $day['date'] }}"
                                     data-day="{{ $day['day'] }}"
+                                    data-is-today="{{ $day['isToday'] ? 'true' : 'false' }}"
                                     data-has-tenant="{{ $isStart ? 'yes' : 'no' }}">
 
                                     <div style="position: relative !important;
                                                 width: 100%;
                                                 height: 100%;
-                                                overflow: visible !important;"
-                                         @mousedown="startDrag({{ $room['id'] }}, '{{ $day['date'] }}', $event)"
-                                         @mouseenter="onDrag({{ $room['id'] }}, '{{ $day['date'] }}')">
-
+                                                overflow: visible !important;
+                                                pointer-events: none !important;"
+                                         data-cell-wrapper>
                                     @if($isStart)
                                         <!-- Tenant Event Bar -->
                                         @php
                                             $start = \Carbon\Carbon::parse($tenant['move_in_date']);
-                                            $end = $tenant['move_out_date'] ? \Carbon\Carbon::parse($tenant['move_out_date']) : \Carbon\Carbon::create($currentYear, $currentMonth, count($days));
+                                            $end = $tenant['move_out_date'] ? \Carbon\Carbon::parse($tenant['move_out_date']) : \Carbon\Carbon::parse($endDate);
 
                                             // 날짜 차이 계산 (시작일과 종료일 포함)
                                             $duration = $start->diffInDays($end) + 1;
 
-                                            // 현재 월에서 표시할 수 있는 최대 일수
-                                            $monthEnd = \Carbon\Carbon::create($currentYear, $currentMonth, count($days));
-                                            $endDateInMonth = $end->lessThanOrEqualTo($monthEnd) ? $end : $monthEnd;
-                                            $displayDuration = $start->diffInDays($endDateInMonth) + 1;
+                                            // 표시 범위의 마지막 날짜
+                                            $displayEnd = \Carbon\Carbon::parse($endDate);
+                                            $endDateInRange = $end->lessThanOrEqualTo($displayEnd) ? $end : $displayEnd;
+                                            $displayDuration = $start->diffInDays($endDateInRange) + 1;
 
                                             // 각 셀의 실제 너비는 width(40px) + border(1px 좌우) + spacing = 약 53px
                                             // 7일 = 370px이므로 역산하면 약 52.86px per cell
@@ -177,8 +305,8 @@
                                                 'tenant' => $tenant['name'],
                                                 'start' => $start->format('Y-m-d'),
                                                 'end' => $end->format('Y-m-d'),
-                                                'monthEnd' => $monthEnd->format('Y-m-d'),
-                                                'endDateInMonth' => $endDateInMonth->format('Y-m-d'),
+                                                'displayEnd' => $displayEnd->format('Y-m-d'),
+                                                'endDateInRange' => $endDateInRange->format('Y-m-d'),
                                                 'duration' => $duration,
                                                 'displayDuration' => $displayDuration,
                                                 'currentDay' => $day['day'],
@@ -209,6 +337,12 @@
                                                     this.barDragging = true;
                                                     this.startX = e.clientX;
                                                     this.startLeft = this.currentLeft;
+
+                                                    // 전역 드래그 상태 설정
+                                                    window.dispatchEvent(new CustomEvent('bar-drag-start', {
+                                                        detail: { tenantId: {{ $tenant['id'] }}, roomId: {{ $room['id'] }} }
+                                                    }));
+
                                                     e.stopPropagation();
                                                     e.preventDefault();
                                                 },
@@ -281,7 +415,7 @@
                                                     left: ${currentLeft}px !important;
                                                     transform: translateY(-50%) !important;
                                                     height: 32px !important;
-                                                    background-color: {{ $tenant['color'] }} !important;
+                                                    {{ $isStartOutsideRange ? 'background: linear-gradient(to right, transparent, ' . $tenant['color'] . ' 20px) !important;' : 'background-color: ' . $tenant['color'] . ' !important;' }}
                                                     border-radius: 4px !important;
                                                     padding: 4px 8px !important;
                                                     color: white !important;
@@ -296,9 +430,11 @@
                                                     box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
                                                     display: flex !important;
                                                     align-items: center !important;
-                                                    border: 2px solid rgba(255,255,255,0.3) !important;`">
+                                                    border: 2px solid rgba(255,255,255,0.3) !important;
+                                                    pointer-events: auto !important;`">
 
                                             <!-- Left Resize Handle -->
+                                            @if(!$isStartOutsideRange)
                                             <div @mousedown.stop="startBarResize('left', $event)"
                                                  data-resize-handle="left"
                                                  style="position: absolute;
@@ -311,12 +447,13 @@
                                                         border-radius: 4px 0 0 4px;
                                                         z-index: 51;">
                                             </div>
+                                            @endif
 
                                             <!-- Content (draggable area) -->
                                             <div @mousedown.stop="startBarDrag($event)"
                                                  @dblclick.stop="$wire.editTenant({{ $tenant['id'] }})"
                                                  data-draggable-bar="true"
-                                                 style="flex: 1; overflow: hidden; text-overflow: ellipsis; user-select: none;">
+                                                 style="flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; text-overflow: ellipsis; user-select: none; white-space: nowrap;">
                                                 {{ $tenant['name'] }} ({{ $tenant['room_number'] }}호) [{{ $displayDuration }}일]
                                             </div>
 
