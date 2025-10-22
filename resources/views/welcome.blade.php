@@ -23,7 +23,7 @@
 
                 <!-- CTA Button -->
                 @auth
-                    <a href="{{ route('dashboard') }}" class="inline-block bg-teal-400 text-white font-semibold text-lg px-12 py-4 rounded-full hover:bg-teal-500 transition duration-150">
+                    <a href="/admin" class="inline-block bg-teal-400 text-white font-semibold text-lg px-12 py-4 rounded-full hover:bg-teal-500 transition duration-150">
                         대시보드로 이동
                     </a>
                 @else
@@ -101,7 +101,7 @@
                     복잡한 고시원 운영, 고집과 함께 간단하게
                 </p>
                 @auth
-                    <a href="{{ route('dashboard') }}" class="inline-block bg-gray-900 text-white font-semibold text-lg px-12 py-4 rounded-full hover:bg-gray-800 transition duration-150">
+                    <a href="/admin" class="inline-block bg-gray-900 text-white font-semibold text-lg px-12 py-4 rounded-full hover:bg-gray-800 transition duration-150">
                         대시보드로 이동
                     </a>
                 @else

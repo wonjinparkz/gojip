@@ -4,12 +4,14 @@ namespace App\Filament\Resources\TenantManagement\Pages;
 
 use App\Filament\Resources\TenantManagement\TenantManagementResource;
 use App\Models\Branch;
-use Filament\Actions\CreateAction;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 
 class ListTenantManagement extends ListRecords
 {
     protected static string $resource = TenantManagementResource::class;
+
+    protected string $view = 'filament.resources.tenant-management.pages.list-tenant-management';
 
     public function getHeading(): string
     {
@@ -22,10 +24,11 @@ class ListTenantManagement extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make()
+            Action::make('create')
                 ->label('입주자 추가하기')
                 ->icon('heroicon-o-plus')
-                ->color('primary'),
+                ->color('primary')
+                ->action(fn () => $this->dispatch('open-tenant-management-modal')),
         ];
     }
 }

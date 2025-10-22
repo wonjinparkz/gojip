@@ -20,6 +20,7 @@ class TenantScheduler extends Component
     public $branchId = null;
 
     #[On('tenant-created')]
+    #[On('tenant-updated')]
     public function refreshData()
     {
         $this->loadData();
@@ -133,6 +134,7 @@ class TenantScheduler extends Component
                         'paid' => '#10b981',
                         'overdue' => '#ef4444',
                         'pending' => '#f59e0b',
+                        'waiting' => '#9ca3af',
                         default => '#6b7280',
                     },
                 ];
@@ -233,7 +235,7 @@ class TenantScheduler extends Component
 
     public function editTenant($tenantId)
     {
-        return redirect()->route('filament.admin.resources.tenants.edit', ['record' => $tenantId]);
+        $this->dispatch('open-tenant-edit-modal', tenantId: $tenantId);
     }
 
     public function moveTenantToRoom($tenantId, $newRoomId)
@@ -243,6 +245,46 @@ class TenantScheduler extends Component
 
         // 같은 호실이면 아무것도 하지 않음
         if ($tenant->room_id == $newRoomId) {
+            return;
+        }
+
+        // 대상 호실에 이미 일정이 겹치는 입주자가 있는지 확인
+        $moveInDate = Carbon::parse($tenant->move_in_date);
+        $moveOutDate = $tenant->move_out_date ? Carbon::parse($tenant->move_out_date) : null;
+
+        $hasOverlap = Tenant::where('room_id', $newRoomId)
+            ->where('id', '!=', $tenantId)
+            ->where(function ($query) use ($moveInDate, $moveOutDate) {
+                if ($moveOutDate) {
+                    // 이동하려는 입주자의 입주 기간이 종료일이 있는 경우
+                    $query->where(function ($q) use ($moveInDate, $moveOutDate) {
+                        // 기존 입주자의 입주일이 이동 기간 내에 있거나
+                        $q->whereBetween('move_in_date', [$moveInDate, $moveOutDate])
+                          // 기존 입주자의 퇴실일이 이동 기간 내에 있거나
+                          ->orWhereBetween('move_out_date', [$moveInDate, $moveOutDate])
+                          // 기존 입주자의 기간이 이동 기간을 포함하는 경우
+                          ->orWhere(function ($q2) use ($moveInDate, $moveOutDate) {
+                              $q2->where('move_in_date', '<=', $moveInDate)
+                                 ->where(function ($q3) use ($moveOutDate) {
+                                     $q3->whereNull('move_out_date')
+                                        ->orWhere('move_out_date', '>=', $moveOutDate);
+                                 });
+                          });
+                    });
+                } else {
+                    // 이동하려는 입주자의 입주 기간이 종료일이 없는 경우 (현재 거주 중)
+                    $query->where(function ($q) use ($moveInDate) {
+                        // 기존 입주자의 퇴실일이 null이거나 입주일 이후인 경우
+                        $q->whereNull('move_out_date')
+                          ->orWhere('move_out_date', '>=', $moveInDate);
+                    });
+                }
+            })
+            ->exists();
+
+        if ($hasOverlap) {
+            // JavaScript alert를 통해 알림 표시
+            $this->dispatch('show-alert', message: '해당 호실은 이미 일정이 존재하여 이동할 수 없습니다.');
             return;
         }
 

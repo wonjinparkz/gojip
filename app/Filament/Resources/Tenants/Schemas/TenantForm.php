@@ -94,6 +94,7 @@ class TenantForm
                                 'paid' => '납부완료',
                                 'pending' => '미납',
                                 'overdue' => '연체',
+                                'waiting' => '대기',
                             ])
                             ->default('pending')
                             ->required(),

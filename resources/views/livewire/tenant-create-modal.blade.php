@@ -60,7 +60,11 @@
                                             <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
                                                 {{ $tenant['phone'] ?: '연락처 없음' }}
                                                 @if($tenant['current_room'])
-                                                    <span style="margin-left: 8px; color: #ef4444;">• 현재 {{ $tenant['current_room'] }}호 입주중</span>
+                                                    @if($tenant['is_future_resident'])
+                                                        <span style="margin-left: 8px; color: #f59e0b;">• 현재 {{ $tenant['current_room'] }}호 입주 대기중</span>
+                                                    @else
+                                                        <span style="margin-left: 8px; color: #ef4444;">• 현재 {{ $tenant['current_room'] }}호 입주중</span>
+                                                    @endif
                                                 @endif
                                             </div>
                                         </div>
@@ -89,6 +93,7 @@
                             <option value="paid">납부완료</option>
                             <option value="pending">미납</option>
                             <option value="overdue">연체</option>
+                            <option value="waiting">대기</option>
                         </select>
                         @error('paymentStatus')
                             <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
@@ -96,13 +101,28 @@
                     </div>
 
                     <!-- Dates Info -->
-                    <div style="margin-bottom: 24px; padding: 16px; background-color: #F9FBFC; border-radius: 8px;">
-                        <p style="font-size: 14px; color: #4b5563; margin: 0;">
-                            <span style="font-weight: 500;">입주일:</span> {{ $moveInDate }}
-                        </p>
-                        <p style="font-size: 14px; color: #4b5563; margin: 8px 0 0 0;">
-                            <span style="font-weight: 500;">퇴실일:</span> {{ $moveOutDate }}
-                        </p>
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">입주일 *</label>
+                        <input type="date"
+                               wire:model="moveInDate"
+                               style="width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;"
+                               onfocus="this.style.outline='2px solid #2dd4bf'; this.style.borderColor='transparent';"
+                               onblur="this.style.outline='none'; this.style.borderColor='#d1d5db';">
+                        @error('moveInDate')
+                            <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">퇴실일 *</label>
+                        <input type="date"
+                               wire:model="moveOutDate"
+                               style="width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;"
+                               onfocus="this.style.outline='2px solid #2dd4bf'; this.style.borderColor='transparent';"
+                               onblur="this.style.outline='none'; this.style.borderColor='#d1d5db';">
+                        @error('moveOutDate')
+                            <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
+                        @enderror
                     </div>
 
                     <!-- Buttons -->
