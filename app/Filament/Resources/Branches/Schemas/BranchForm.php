@@ -18,6 +18,24 @@ class BranchForm
                             ->label('지점명')
                             ->required()
                             ->maxLength(255),
+                        Forms\Components\TextInput::make('address')
+                            ->label('주소')
+                            ->maxLength(255),
+                        Forms\Components\Repeater::make('phone_numbers')
+                            ->label('전화번호')
+                            ->schema([
+                                Forms\Components\TextInput::make('number')
+                                    ->label('전화번호')
+                                    ->tel()
+                                    ->placeholder('예: 02-1234-5678')
+                                    ->maxLength(20)
+                                    ->required(),
+                            ])
+                            ->defaultItems(1)
+                            ->addActionLabel('전화번호 추가')
+                            ->simple()
+                            ->columns(1)
+                            ->columnSpan(3),
                         Forms\Components\TextInput::make('start_floor')
                             ->label('시작 층수')
                             ->required()

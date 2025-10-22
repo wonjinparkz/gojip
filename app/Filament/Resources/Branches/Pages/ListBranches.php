@@ -13,7 +13,12 @@ class ListBranches extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()
+                ->url(null)
+                ->extraAttributes([
+                    'onclick' => 'openAddBranchModal(); return false;',
+                    'type' => 'button',
+                ]),
         ];
     }
 }

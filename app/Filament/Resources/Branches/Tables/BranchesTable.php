@@ -18,14 +18,20 @@ class BranchesTable
                     ->label('지점명')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('start_floor')
-                    ->label('시작 층수')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('end_floor')
-                    ->label('종료 층수')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('address')
+                    ->label('주소')
+                    ->searchable()
+                    ->limit(30),
+                TextColumn::make('phone')
+                    ->label('전화번호')
+                    ->searchable()
+                    ->formatStateUsing(function ($state) {
+                        if (empty($state)) {
+                            return '-';
+                        }
+                        // 콤마로 구분된 전화번호를 줄바꿈으로 표시
+                        return str_replace(',', ' / ', $state);
+                    }),
                 TextColumn::make('rooms_count')
                     ->label('호실 수')
                     ->counts('rooms')

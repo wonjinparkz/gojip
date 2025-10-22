@@ -10,4 +10,7 @@
 
     <!-- Tenant Create Modal Component -->
     <livewire:tenant-create-modal wire:key="tenant-modal" />
+
+    <!-- Tenant Edit Modal Component -->
+    <livewire:tenant-edit-modal wire:key="tenant-edit-modal" />
 </x-filament-panels::page>

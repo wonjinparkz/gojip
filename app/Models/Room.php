@@ -22,6 +22,9 @@ class Room extends Model
         'move_in_date',
         'move_out_date',
         'tenant_name',
+        'check_in_completed_at',
+        'check_out_completed_at',
+        'cleaning_status',
     ];
 
     protected $casts = [
@@ -30,6 +33,8 @@ class Room extends Model
         'deposit' => 'integer',
         'move_in_date' => 'date',
         'move_out_date' => 'date',
+        'check_in_completed_at' => 'datetime',
+        'check_out_completed_at' => 'datetime',
     ];
 
     public function branch(): BelongsTo

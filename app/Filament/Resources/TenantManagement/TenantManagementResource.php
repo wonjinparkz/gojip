@@ -48,14 +48,15 @@ class TenantManagementResource extends Resource
     {
         return [
             'index' => ListTenantManagement::route('/'),
-            'create' => CreateTenantManagement::route('/create'),
-            'edit' => EditTenantManagement::route('/{record}/edit'),
+            // 'create' => CreateTenantManagement::route('/create'), // 모달로 대체
+            // 'edit' => EditTenantManagement::route('/{record}/edit'), // 모달로 대체
         ];
     }
 
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()
+            ->with('room') // Room 정보를 eager load하여 입주자 상태 계산
             ->whereHas('branch', function (Builder $query) {
                 $query->where('user_id', auth()->id());
             });

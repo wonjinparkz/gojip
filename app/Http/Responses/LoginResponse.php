@@ -23,6 +23,15 @@ class LoginResponse implements LoginResponseContract
             if (!$user->onboarding_completed) {
                 $user->update(['onboarding_completed' => true]);
             }
+
+            // 세션에 current_branch_id가 없으면 첫 번째 지점을 자동 설정
+            if (!session()->has('current_branch_id')) {
+                $firstBranch = $user->branches()->first();
+                if ($firstBranch) {
+                    session(['current_branch_id' => $firstBranch->id]);
+                }
+            }
+
             return redirect()->intended('/admin');
         }
 

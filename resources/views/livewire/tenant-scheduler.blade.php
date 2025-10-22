@@ -7,6 +7,15 @@
     barDragging: false,
     draggedTenantId: null,
     draggedBarStartRoom: null,
+    draggedTenantData: null,
+    contextMenuTenantId: null,
+    contextMenuX: 0,
+    contextMenuY: 0,
+    editingTenantId: null, // 현재 편집 중인 입주자 ID
+
+    isEditingTenant(tenantId) {
+        return this.editingTenantId === tenantId;
+    },
 
     startDrag(roomId, date, event) {
         // 박스나 리사이즈 핸들을 클릭한 경우 셀 드래그 비활성화
@@ -52,50 +61,110 @@
         return date >= start && date <= end;
     },
 
-    startBarDrag(tenantId, roomId) {
+    startBarDrag(tenantId, roomId, tenantData) {
         this.barDragging = true;
         this.draggedTenantId = tenantId;
         this.draggedBarStartRoom = roomId;
+        this.draggedTenantData = tenantData;
     },
 
     endBarDrag(roomId) {
         if (this.barDragging && this.draggedTenantId && roomId !== this.draggedBarStartRoom) {
-            $wire.moveTenantToRoom(this.draggedTenantId, roomId);
+            const currentEditingId = window.editingTenantId; // 현재 편집 중인 ID 저장
+            $wire.moveTenantToRoom(this.draggedTenantId, roomId).then(() => {
+                // 업데이트 후 편집 모드 복원
+                if (currentEditingId) {
+                    window.editingTenantId = currentEditingId;
+                    console.log('편집 모드 복원됨 (호실 이동):', currentEditingId);
+                    // 편집 모드 변경 이벤트 발생
+                    window.dispatchEvent(new CustomEvent('edit-mode-changed'));
+                }
+            });
         }
         this.barDragging = false;
         this.draggedTenantId = null;
         this.draggedBarStartRoom = null;
+        this.draggedTenantData = null;
+    },
+
+    showContextMenu(tenantId, event) {
+        this.contextMenuTenantId = tenantId;
+        this.contextMenuX = event.detail.x;
+        this.contextMenuY = event.detail.y;
+    },
+
+    hideContextMenu() {
+        this.contextMenuTenantId = null;
+    },
+
+    enableEditing(tenantId) {
+        this.editingTenantId = tenantId;
+        window.editingTenantId = tenantId; // 전역 변수에도 저장
+        console.log('편집 모드 활성화:', { tenantId, editingTenantId: this.editingTenantId, global: window.editingTenantId });
+        this.hideContextMenu();
+        // 모든 일정 바에 편집 모드 변경 알림
+        window.dispatchEvent(new CustomEvent('edit-mode-changed'));
+    },
+
+    disableEditing() {
+        this.editingTenantId = null;
+        window.editingTenantId = null; // 전역 변수도 초기화
+        // 모든 일정 바에 편집 모드 변경 알림
+        window.dispatchEvent(new CustomEvent('edit-mode-changed'));
     }
 }"
     @mouseup.window="endDrag()"
-    @bar-drag-start.window="startBarDrag($event.detail.tenantId, $event.detail.roomId)"
-    @mouseup.window="if (barDragging) { barDragging = false; draggedTenantId = null; draggedBarStartRoom = null; }"
+    @click.window="hideContextMenu()"
+    @bar-drag-start.window="startBarDrag($event.detail.tenantId, $event.detail.roomId, $event.detail.tenantData)"
+    @open-context-menu.window="contextMenuTenantId = $event.detail.tenantId; contextMenuX = $event.detail.x; contextMenuY = $event.detail.y"
+    @mouseup.window="if (barDragging) { barDragging = false; draggedTenantId = null; draggedBarStartRoom = null; draggedTenantData = null; }"
     @tenant-created.window="console.log('tenant-created 이벤트 수신'); $wire.$refresh()"
-    x-init="console.log('TenantScheduler 초기화:', { branchId: '{{ $branchId }}', tenants: @js($tenants) })">
+    @show-alert.window="alert($event.detail.message)"
+    x-init="console.log('TenantScheduler 초기화:', { branchId: '{{ $branchId }}', tenants: @js($tenants) });
+            window.editingTenantId = null;">
+
+    <!-- Context Menu -->
+    <div x-show="contextMenuTenantId !== null"
+         x-transition
+         @click.stop
+         :style="`position: fixed; top: ${contextMenuY}px; left: ${contextMenuX}px; z-index: 1000;`"
+         style="display: none;">
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); min-width: 150px; padding: 4px;">
+            <button @click="enableEditing(contextMenuTenantId)"
+                    style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 14px; color: #374151; border-radius: 4px; transition: background-color 0.2s;"
+                    onmouseover="this.style.backgroundColor='#f3f4f6'"
+                    onmouseout="this.style.backgroundColor='transparent'">
+                일정 변경
+            </button>
+            <button @click="$wire.editTenant(contextMenuTenantId); hideContextMenu();"
+                    style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 14px; color: #374151; border-radius: 4px; transition: background-color 0.2s;"
+                    onmouseover="this.style.backgroundColor='#f3f4f6'"
+                    onmouseout="this.style.backgroundColor='transparent'">
+                입주자 정보 수정
+            </button>
+        </div>
+    </div>
+    <!-- 편집 모드 알림 -->
+    <div x-show="editingTenantId !== null"
+         x-transition
+         style="background-color: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 14px; color: #1e40af; font-weight: 500;">
+                일정 편집 모드 - 드래그하여 날짜를 이동하거나 핸들을 드래그하여 기간을 조정하세요
+            </span>
+            <button @click="disableEditing()"
+                    style="padding: 6px 16px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                편집 완료
+            </button>
+        </div>
+    </div>
+
     <!-- Scheduler Container -->
     <div style="background-color: white; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); padding: 32px;">
-        <!-- Title Section & Controls -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <div>
-                <h2 style="font-size: 20px; font-weight: 700; color: #111827; margin: 0 0 8px 0;">입주자 일정 관리</h2>
-                <p style="font-size: 14px; color: #4b5563; margin: 0;">호실별 입주자 일정을 확인하고 관리할 수 있습니다.</p>
-            </div>
-
-            <!-- Month Navigation -->
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <button wire:click="previousMonth" type="button" style="padding: 8px 16px; background-color: white; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; font-weight: 500; color: #374151;">
-                    ← 이전
-                </button>
-                <button wire:click="today" type="button" style="padding: 8px 16px; background-color: #2dd4bf; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white;">
-                    오늘
-                </button>
-                <span style="font-size: 16px; font-weight: 600; color: #111827; min-width: 120px; text-align: center;">
-                    {{ $currentYear }}년 {{ $currentMonth }}월
-                </span>
-                <button wire:click="nextMonth" type="button" style="padding: 8px 16px; background-color: white; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; font-weight: 500; color: #374151;">
-                    다음 →
-                </button>
-            </div>
+        <!-- Title Section -->
+        <div style="margin-bottom: 24px;">
+            <h2 style="font-size: 20px; font-weight: 700; color: #111827; margin: 0 0 8px 0;">입주자 일정 관리</h2>
+            <p style="font-size: 14px; color: #4b5563; margin: 0;">호실별 입주자 일정을 확인하고 관리할 수 있습니다.</p>
         </div>
 
         <!-- Scheduler Table -->
@@ -282,24 +351,26 @@
                                                 overflow: visible !important;
                                                 pointer-events: none !important;"
                                          data-cell-wrapper>
+
                                     @if($isStart)
                                         <!-- Tenant Event Bar -->
                                         @php
-                                            $start = \Carbon\Carbon::parse($tenant['move_in_date']);
-                                            $end = $tenant['move_out_date'] ? \Carbon\Carbon::parse($tenant['move_out_date']) : \Carbon\Carbon::parse($endDate);
+                                            $start = \Carbon\Carbon::parse($tenant['move_in_date'])->startOfDay();
+                                            $end = $tenant['move_out_date'] ? \Carbon\Carbon::parse($tenant['move_out_date'])->startOfDay() : \Carbon\Carbon::parse($endDate)->startOfDay();
 
                                             // 날짜 차이 계산 (시작일과 종료일 포함)
-                                            $duration = $start->diffInDays($end) + 1;
+                                            // 종료일까지 포함하려면 종료일 다음날까지의 차이를 계산
+                                            $duration = $start->diffInDays($end->copy()->addDay());
 
                                             // 표시 범위의 마지막 날짜
-                                            $displayEnd = \Carbon\Carbon::parse($endDate);
+                                            $displayEnd = \Carbon\Carbon::parse($endDate)->startOfDay();
                                             $endDateInRange = $end->lessThanOrEqualTo($displayEnd) ? $end : $displayEnd;
-                                            $displayDuration = $start->diffInDays($endDateInRange) + 1;
+                                            // 정확한 일수 계산: 시작일부터 종료일까지 포함
+                                            $displayDuration = $start->diffInDays($endDateInRange->copy()->addDay());
 
-                                            // 각 셀의 실제 너비는 width(40px) + border(1px 좌우) + spacing = 약 53px
-                                            // 7일 = 370px이므로 역산하면 약 52.86px per cell
-                                            $cellWidth = 53; // 실제 렌더링되는 셀 너비
-                                            $calculatedWidth = ($displayDuration * $cellWidth) - 2;
+                                            // 각 셀의 실제 너비 = 40px
+                                            $cellWidth = 40;
+                                            $calculatedWidth = $displayDuration * $cellWidth;
 
                                             \Log::info("박스 너비 계산:", [
                                                 'tenant' => $tenant['name'],
@@ -323,6 +394,7 @@
                                                 baseWidth: {{ $calculatedWidth }},
                                                 currentWidth: {{ $calculatedWidth }},
                                                 currentLeft: 1,
+                                                isEditMode: false,
 
                                                 get startWidth() {
                                                     return this.baseWidth;
@@ -332,7 +404,26 @@
                                                     return 1;
                                                 },
 
+                                                isEditing() {
+                                                    return window.editingTenantId === {{ $tenant['id'] }};
+                                                },
+
+                                                checkEditMode() {
+                                                    this.isEditMode = window.editingTenantId === {{ $tenant['id'] }};
+                                                },
+
                                                 startBarDrag(e) {
+                                                    // 편집 모드가 아니면 드래그 불가
+                                                    console.log('startBarDrag 체크:', {
+                                                        editingTenantId: window.editingTenantId,
+                                                        thisTenantId: {{ $tenant['id'] }},
+                                                        canDrag: window.editingTenantId === {{ $tenant['id'] }}
+                                                    });
+                                                    if (window.editingTenantId !== {{ $tenant['id'] }}) {
+                                                        console.log('드래그 거부됨');
+                                                        return;
+                                                    }
+                                                    console.log('드래그 허용됨');
                                                     if (this.barResizing) return;
                                                     this.barDragging = true;
                                                     this.startX = e.clientX;
@@ -340,7 +431,17 @@
 
                                                     // 전역 드래그 상태 설정
                                                     window.dispatchEvent(new CustomEvent('bar-drag-start', {
-                                                        detail: { tenantId: {{ $tenant['id'] }}, roomId: {{ $room['id'] }} }
+                                                        detail: {
+                                                            tenantId: {{ $tenant['id'] }},
+                                                            roomId: {{ $room['id'] }},
+                                                            tenantData: {
+                                                                name: '{{ $tenant['name'] }}',
+                                                                color: '{{ $tenant['color'] }}',
+                                                                moveInDate: '{{ $tenant['move_in_date'] }}',
+                                                                moveOutDate: '{{ $tenant['move_out_date'] ?? '' }}',
+                                                                displayDuration: {{ $displayDuration }}
+                                                            }
+                                                        }
                                                     }));
 
                                                     e.stopPropagation();
@@ -357,18 +458,38 @@
                                                     if (!this.barDragging) return;
                                                     this.barDragging = false;
 
-                                                    // 이동한 거리를 날짜로 변환 (53px per day)
-                                                    const cellWidth = 53;
+                                                    // 이동한 거리를 날짜로 변환 (40px per day)
+                                                    const cellWidth = 40;
                                                     const daysMoved = Math.round((this.currentLeft - 1) / cellWidth);
 
                                                     if (daysMoved !== 0) {
+                                                        const currentEditingId = window.editingTenantId; // 현재 편집 중인 ID 저장
                                                         // Livewire 업데이트 - wire:key 변경으로 자동 재렌더링됨
-                                                        $wire.updateTenantDates({{ $tenant['id'] }}, daysMoved);
+                                                        $wire.updateTenantDates({{ $tenant['id'] }}, daysMoved).then(() => {
+                                                            // 업데이트 후 편집 모드 복원
+                                                            if (currentEditingId) {
+                                                                window.editingTenantId = currentEditingId;
+                                                                console.log('편집 모드 복원됨:', currentEditingId);
+                                                                // 편집 모드 변경 이벤트 발생
+                                                                window.dispatchEvent(new CustomEvent('edit-mode-changed'));
+                                                            }
+                                                        });
                                                     }
                                                     // 원위치는 제거 - 새로 렌더링되므로 불필요
                                                 },
 
                                                 startBarResize(type, e) {
+                                                    // 편집 모드가 아니면 리사이즈 불가
+                                                    console.log('startBarResize 체크:', {
+                                                        editingTenantId: window.editingTenantId,
+                                                        thisTenantId: {{ $tenant['id'] }},
+                                                        canResize: window.editingTenantId === {{ $tenant['id'] }}
+                                                    });
+                                                    if (window.editingTenantId !== {{ $tenant['id'] }}) {
+                                                        console.log('리사이즈 거부됨');
+                                                        return;
+                                                    }
+                                                    console.log('리사이즈 허용됨');
                                                     this.barResizing = true;
                                                     this.resizeType = type;
                                                     this.startX = e.clientX;
@@ -393,19 +514,31 @@
                                                     if (!this.barResizing) return;
                                                     this.barResizing = false;
 
-                                                    const cellWidth = 53;
+                                                    const cellWidth = 40;
                                                     const daysChanged = Math.round((this.currentWidth - this.baseWidth) / cellWidth);
                                                     const daysMovedLeft = Math.round((this.currentLeft - 1) / cellWidth);
 
                                                     if (daysChanged !== 0 || daysMovedLeft !== 0) {
+                                                        const currentEditingId = window.editingTenantId; // 현재 편집 중인 ID 저장
                                                         // Livewire 업데이트 - wire:key 변경으로 자동 재렌더링됨
-                                                        $wire.resizeTenantDates({{ $tenant['id'] }}, this.resizeType, daysChanged, daysMovedLeft);
+                                                        $wire.resizeTenantDates({{ $tenant['id'] }}, this.resizeType, daysChanged, daysMovedLeft).then(() => {
+                                                            // 업데이트 후 편집 모드 복원
+                                                            if (currentEditingId) {
+                                                                window.editingTenantId = currentEditingId;
+                                                                console.log('편집 모드 복원됨 (리사이즈):', currentEditingId);
+                                                                // 편집 모드 변경 이벤트 발생
+                                                                window.dispatchEvent(new CustomEvent('edit-mode-changed'));
+                                                            }
+                                                        });
                                                     }
                                                     // 원위치는 제거 - 새로 렌더링되므로 불필요
                                                 }
                                              }"
                                              @mousemove.window="barDragging ? onBarDragMove($event) : (barResizing ? onBarResizeMove($event) : null)"
                                              @mouseup.window="barDragging ? endBarDrag($event) : (barResizing ? endBarResize($event) : null)"
+                                             @contextmenu.prevent.stop="$dispatch('open-context-menu', { tenantId: {{ $tenant['id'] }}, x: $event.clientX, y: $event.clientY })"
+                                             @edit-mode-changed.window="checkEditMode()"
+                                             x-init="checkEditMode()"
                                              wire:key="tenant-bar-{{ $tenant['id'] }}-{{ $tenant['move_in_date'] }}-{{ $tenant['move_out_date'] }}-{{ $calculatedWidth }}"
                                              data-tenant-bar="visible"
                                              data-tenant-id="{{ $tenant['id'] }}"
@@ -424,18 +557,19 @@
                                                     overflow: visible !important;
                                                     text-overflow: ellipsis !important;
                                                     white-space: nowrap !important;
-                                                    cursor: ${barDragging || barResizing ? 'grabbing' : 'grab'} !important;
+                                                    cursor: ${barDragging || barResizing ? 'grabbing' : (isEditing() ? 'grab' : 'context-menu')} !important;
                                                     z-index: 50 !important;
                                                     width: ${currentWidth}px !important;
-                                                    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+                                                    box-shadow: ${isEditing() ? '0 0 0 3px rgba(59, 130, 246, 0.5), 0 2px 4px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.2)'} !important;
                                                     display: flex !important;
                                                     align-items: center !important;
-                                                    border: 2px solid rgba(255,255,255,0.3) !important;
+                                                    border: 2px solid ${isEditing() ? 'rgba(59, 130, 246, 0.8)' : 'rgba(255,255,255,0.3)'} !important;
                                                     pointer-events: auto !important;`">
 
                                             <!-- Left Resize Handle -->
                                             @if(!$isStartOutsideRange)
-                                            <div @mousedown.stop="startBarResize('left', $event)"
+                                            <div x-show="isEditMode"
+                                                 @mousedown.stop="startBarResize('left', $event)"
                                                  data-resize-handle="left"
                                                  style="position: absolute;
                                                         left: -2px;
@@ -443,9 +577,10 @@
                                                         bottom: 0;
                                                         width: 8px;
                                                         cursor: ew-resize !important;
-                                                        background: rgba(255,255,255,0.4);
+                                                        background: rgba(255,255,255,0.6);
                                                         border-radius: 4px 0 0 4px;
-                                                        z-index: 51;">
+                                                        z-index: 51;
+                                                        display: none;">
                                             </div>
                                             @endif
 
@@ -458,7 +593,8 @@
                                             </div>
 
                                             <!-- Right Resize Handle -->
-                                            <div @mousedown.stop="startBarResize('right', $event)"
+                                            <div x-show="isEditMode"
+                                                 @mousedown.stop="startBarResize('right', $event)"
                                                  data-resize-handle="right"
                                                  style="position: absolute;
                                                         right: -2px;
@@ -466,9 +602,10 @@
                                                         bottom: 0;
                                                         width: 8px;
                                                         cursor: ew-resize !important;
-                                                        background: rgba(255,255,255,0.4);
+                                                        background: rgba(255,255,255,0.6);
                                                         border-radius: 0 4px 4px 0;
-                                                        z-index: 51;">
+                                                        z-index: 51;
+                                                        display: none;">
                                             </div>
                                         </div>
                                     @endif
@@ -495,6 +632,10 @@
             <div style="display: flex; align-items: center; gap: 6px;">
                 <div style="width: 16px; height: 16px; background-color: #ef4444; border-radius: 3px;"></div>
                 <span style="font-size: 13px; color: #6b7280;">연체</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 16px; height: 16px; background-color: #9ca3af; border-radius: 3px;"></div>
+                <span style="font-size: 13px; color: #6b7280;">대기</span>
             </div>
         </div>
     </div>

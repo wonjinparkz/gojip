@@ -39,14 +39,9 @@ class AdminPanelProvider extends PanelProvider
             ->darkMode(false)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-            ->pages([
-                Pages\Dashboard::class,
-            ])
+            ->pages([])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
-            ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
-            ])
+            ->widgets([])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -285,19 +280,78 @@ class AdminPanelProvider extends PanelProvider
                         dropdown.style.display = isHidden ? 'block' : 'none';
                     }
 
+                    function addPhoneNumberField() {
+                        const container = document.getElementById('phone-numbers-container');
+                        const newRow = document.createElement('div');
+                        newRow.className = 'phone-number-row';
+                        newRow.style.cssText = 'display: flex; gap: 0.5rem; align-items: center;';
+
+                        newRow.innerHTML = `
+                            <input type="text" class="branch-phone-input" placeholder="예: 02-1234-5678" pattern="[0-9-]+" style="flex: 1; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none;">
+                            <button type="button" onclick="removePhoneNumberField(this)" style="display: inline-flex; align-items: center; justify-content: center; height: 2.5rem; width: 2.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; color: #ef4444; cursor: pointer; flex-shrink: 0;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M5 12h14"></path>
+                                </svg>
+                            </button>
+                        `;
+
+                        container.appendChild(newRow);
+
+                        // Add input filter to new phone input
+                        const newInput = newRow.querySelector('.branch-phone-input');
+                        newInput.addEventListener('input', function(e) {
+                            this.value = this.value.replace(/[^0-9-]/g, '');
+                        });
+                    }
+
+                    function removePhoneNumberField(button) {
+                        button.parentElement.remove();
+                    }
+
                     function openAddBranchModal() {
                         document.getElementById('add-branch-modal').style.display = 'flex';
+
+                        // Add input filter for all phone number inputs
+                        document.querySelectorAll('.branch-phone-input').forEach(function(input) {
+                            if (!input.dataset.listenerAdded) {
+                                input.addEventListener('input', function(e) {
+                                    this.value = this.value.replace(/[^0-9-]/g, '');
+                                });
+                                input.dataset.listenerAdded = 'true';
+                            }
+                        });
                     }
 
                     function closeAddBranchModal() {
                         document.getElementById('add-branch-modal').style.display = 'none';
                         document.getElementById('branch-form').reset();
+
+                        // Remove all additional phone number fields
+                        const container = document.getElementById('phone-numbers-container');
+                        const rows = container.querySelectorAll('.phone-number-row');
+                        rows.forEach((row, index) => {
+                            if (index > 0) {
+                                row.remove();
+                            }
+                        });
+
+                        // Clear the first phone input
+                        const firstInput = container.querySelector('.branch-phone-input');
+                        if (firstInput) {
+                            firstInput.value = '';
+                        }
                     }
 
                     async function submitAddBranch() {
                         const name = document.getElementById('branchName').value;
                         const address = document.getElementById('branchAddress').value;
-                        const phone = document.getElementById('branchPhone').value;
+
+                        // Collect all phone numbers
+                        const phoneInputs = document.querySelectorAll('.branch-phone-input');
+                        const phoneNumbers = Array.from(phoneInputs)
+                            .map(input => input.value.trim())
+                            .filter(phone => phone !== '');
+                        const phone = phoneNumbers.join(',');
 
                         if (!name) {
                             alert('지점명을 입력해주세요.');
@@ -440,8 +494,18 @@ class AdminPanelProvider extends PanelProvider
                                 <input id="branchAddress" type="text" placeholder="예: 서울시 강남구 테헤란로" data-testid="input-branch-address" style="display: flex; height: 2.5rem; width: 100%; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none;">
                             </div>
                             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                <label for="branchPhone" style="font-size: 0.875rem; font-weight: 500; line-height: 1.25;">전화번호</label>
-                                <input id="branchPhone" type="text" placeholder="예: 02-1234-5678" data-testid="input-branch-phone" style="display: flex; height: 2.5rem; width: 100%; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none;">
+                                <label style="font-size: 0.875rem; font-weight: 500; line-height: 1.25;">전화번호</label>
+                                <div id="phone-numbers-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    <div class="phone-number-row" style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <input type="text" class="branch-phone-input" placeholder="예: 02-1234-5678" pattern="[0-9-]+" style="flex: 1; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none;">
+                                        <button type="button" onclick="addPhoneNumberField()" style="display: inline-flex; align-items: center; justify-content: center; height: 2.5rem; width: 2.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; color: #1EC3B0; cursor: pointer; flex-shrink: 0;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M5 12h14"></path>
+                                                <path d="M12 5v14"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
                                 <button type="button" onclick="closeAddBranchModal()" data-testid="button-cancel-add" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; height: 2.5rem; padding: 0.5rem 1rem; border: 1px solid #d1d5db; background: white; color: #374151; cursor: pointer;">

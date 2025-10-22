@@ -76,10 +76,172 @@ class ListRooms extends Page implements HasForms
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()
+            Actions\ActionGroup::make([
+                Action::make('createSingle')
+                    ->label('호실 하나씩 추가하기')
+                    ->icon('heroicon-o-plus')
+                    ->form([
+                        Forms\Components\TextInput::make('room_number')
+                            ->label('호실 번호')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder('예: 201'),
+                        Forms\Components\TextInput::make('floor')
+                            ->label('층')
+                            ->required()
+                            ->numeric()
+                            ->default(1)
+                            ->placeholder('예: 2'),
+                        Forms\Components\TextInput::make('room_type')
+                            ->label('방 유형')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder('예: 스탠다드룸'),
+                        Forms\Components\TextInput::make('monthly_rent')
+                            ->label('월세')
+                            ->required()
+                            ->prefix('₩')
+                            ->placeholder('600,000')
+                            ->extraInputAttributes([
+                                'x-mask:dynamic' => '$money($input)',
+                            ])
+                            ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace(',', '', $state) : null),
+                        Forms\Components\TextInput::make('deposit')
+                            ->label('보증금')
+                            ->required()
+                            ->prefix('₩')
+                            ->default(0)
+                            ->placeholder('0')
+                            ->extraInputAttributes([
+                                'x-mask:dynamic' => '$money($input)',
+                            ])
+                            ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace(',', '', $state) : null),
+                    ])
+                    ->action(function (array $data) {
+                        $branchId = session('current_branch_id', $this->selectedBranchId);
+
+                        if (!$branchId) {
+                            Notification::make()
+                                ->title('지점을 선택해주세요')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        Room::create([
+                            'branch_id' => $branchId,
+                            'room_number' => $data['room_number'],
+                            'floor' => $data['floor'],
+                            'room_type' => $data['room_type'],
+                            'monthly_rent' => $data['monthly_rent'],
+                            'deposit' => $data['deposit'],
+                            'status' => 'available',
+                        ]);
+
+                        Notification::make()
+                            ->title('호실이 생성되었습니다')
+                            ->success()
+                            ->send();
+                    })
+                    ->modalWidth(Width::Large),
+                Action::make('createMultiple')
+                    ->label('호실 여러 개 추가하기')
+                    ->icon('heroicon-o-plus-circle')
+                    ->form([
+                        Forms\Components\TextInput::make('start_floor')
+                            ->label('시작 층')
+                            ->required()
+                            ->numeric()
+                            ->default(1)
+                            ->placeholder('예: 2'),
+                        Forms\Components\TextInput::make('end_floor')
+                            ->label('끝 층')
+                            ->required()
+                            ->numeric()
+                            ->placeholder('예: 5'),
+                        Forms\Components\TextInput::make('rooms_per_floor')
+                            ->label('층당 방 개수')
+                            ->required()
+                            ->numeric()
+                            ->default(10)
+                            ->placeholder('예: 10'),
+                        Forms\Components\TextInput::make('room_type')
+                            ->label('방 유형')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder('예: 스탠다드룸'),
+                        Forms\Components\TextInput::make('monthly_rent')
+                            ->label('월세')
+                            ->required()
+                            ->prefix('₩')
+                            ->placeholder('600,000')
+                            ->extraInputAttributes([
+                                'x-mask:dynamic' => '$money($input)',
+                            ])
+                            ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace(',', '', $state) : null),
+                        Forms\Components\TextInput::make('deposit')
+                            ->label('보증금')
+                            ->required()
+                            ->prefix('₩')
+                            ->default(0)
+                            ->placeholder('0')
+                            ->extraInputAttributes([
+                                'x-mask:dynamic' => '$money($input)',
+                            ])
+                            ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace(',', '', $state) : null),
+                    ])
+                    ->action(function (array $data) {
+                        $branchId = session('current_branch_id', $this->selectedBranchId);
+
+                        if (!$branchId) {
+                            Notification::make()
+                                ->title('지점을 선택해주세요')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        $startFloor = (int) $data['start_floor'];
+                        $endFloor = (int) $data['end_floor'];
+                        $roomsPerFloor = (int) $data['rooms_per_floor'];
+
+                        if ($startFloor > $endFloor) {
+                            Notification::make()
+                                ->title('시작 층이 끝 층보다 클 수 없습니다')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        $createdCount = 0;
+                        for ($floor = $startFloor; $floor <= $endFloor; $floor++) {
+                            for ($roomNum = 1; $roomNum <= $roomsPerFloor; $roomNum++) {
+                                $roomNumber = $floor . str_pad($roomNum, 2, '0', STR_PAD_LEFT);
+
+                                Room::create([
+                                    'branch_id' => $branchId,
+                                    'room_number' => $roomNumber,
+                                    'floor' => $floor,
+                                    'room_type' => $data['room_type'],
+                                    'monthly_rent' => $data['monthly_rent'],
+                                    'deposit' => $data['deposit'],
+                                    'status' => 'available',
+                                ]);
+                                $createdCount++;
+                            }
+                        }
+
+                        Notification::make()
+                            ->title("{$createdCount}개의 호실이 생성되었습니다")
+                            ->success()
+                            ->send();
+                    })
+                    ->modalWidth(Width::Large),
+            ])
                 ->label('방 추가하기')
                 ->icon('heroicon-o-plus')
-                ->color('primary'),
+                ->color('primary')
+                ->button(),
         ];
     }
 

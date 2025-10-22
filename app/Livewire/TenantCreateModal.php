@@ -51,17 +51,38 @@ class TenantCreateModal extends Component
             $query->where('branch_id', $this->branchId);
         }
 
-        $this->allTenants = $query->get()
-            ->map(function ($tenant) {
-                return [
+        $today = now()->format('Y-m-d');
+
+        $tenants = $query->orderBy('created_at', 'desc')->get();
+
+        // 같은 이름과 전화번호를 가진 입주자 중 가장 최근 레코드만 선택
+        $uniqueTenants = [];
+        $seenKeys = [];
+
+        foreach ($tenants as $tenant) {
+            $key = $tenant->name . '|' . $tenant->phone;
+
+            if (!in_array($key, $seenKeys)) {
+                $seenKeys[] = $key;
+                $isFutureResident = false;
+                $currentRoom = $tenant->room_number ?? null;
+
+                // 입주일이 미래 날짜인 경우
+                if ($tenant->move_in_date && $tenant->move_in_date->format('Y-m-d') > $today) {
+                    $isFutureResident = true;
+                }
+
+                $uniqueTenants[] = [
                     'id' => $tenant->id,
                     'name' => $tenant->name,
                     'phone' => $tenant->phone ?? '',
-                    'current_room' => $tenant->room_number ?? null,
+                    'current_room' => $currentRoom,
+                    'is_future_resident' => $isFutureResident,
                 ];
-            })
-            ->toArray();
+            }
+        }
 
+        $this->allTenants = $uniqueTenants;
         $this->filteredTenants = $this->allTenants;
     }
 
@@ -121,7 +142,9 @@ class TenantCreateModal extends Component
         }
 
         $this->validate([
-            'paymentStatus' => 'required|in:paid,pending,overdue',
+            'moveInDate' => 'required|date',
+            'moveOutDate' => 'required|date|after_or_equal:moveInDate',
+            'paymentStatus' => 'required|in:paid,pending,overdue,waiting',
         ]);
 
         \Log::info('=== TenantCreateModal save 시작 ===');
@@ -129,7 +152,7 @@ class TenantCreateModal extends Component
         $room = Room::findOrFail($this->roomId);
         $selectedTenant = Tenant::findOrFail($this->selectedTenantId);
 
-        \Log::info('업데이트 전 입주자 정보:', [
+        \Log::info('기존 입주자 정보:', [
             'id' => $selectedTenant->id,
             'name' => $selectedTenant->name,
             'room_id' => $selectedTenant->room_id,
@@ -137,7 +160,7 @@ class TenantCreateModal extends Component
             'move_out_date' => $selectedTenant->move_out_date,
         ]);
 
-        \Log::info('업데이트 할 데이터:', [
+        \Log::info('생성할 새 일정 데이터:', [
             'room_id' => $this->roomId,
             'room_number' => $room->room_number,
             'move_in_date' => $this->moveInDate,
@@ -145,29 +168,37 @@ class TenantCreateModal extends Component
             'payment_status' => $this->paymentStatus,
         ]);
 
-        // 기존 입주자 정보 업데이트
-        $selectedTenant->update([
+        // 기존 입주자 정보를 기반으로 새로운 입주자 레코드 생성 (과거 일정 유지)
+        $newTenant = Tenant::create([
+            'user_id' => $selectedTenant->user_id,
+            'branch_id' => $selectedTenant->branch_id,
             'room_id' => $this->roomId,
+            'name' => $selectedTenant->name,
+            'phone' => $selectedTenant->phone,
+            'gender' => $selectedTenant->gender ?? null,
             'room_number' => $room->room_number,
+            'room_type' => $room->room_type,
+            'monthly_rent' => $room->monthly_rent ?? 0,
             'move_in_date' => $this->moveInDate,
             'move_out_date' => $this->moveOutDate,
             'payment_status' => $this->paymentStatus,
             'status' => 'active',
+            'is_blacklisted' => $selectedTenant->is_blacklisted,
+            'blacklist_memo' => $selectedTenant->blacklist_memo,
         ]);
 
-        $selectedTenant->refresh();
-        \Log::info('업데이트 후 입주자 정보:', [
-            'id' => $selectedTenant->id,
-            'name' => $selectedTenant->name,
-            'room_id' => $selectedTenant->room_id,
-            'move_in_date' => $selectedTenant->move_in_date,
-            'move_out_date' => $selectedTenant->move_out_date,
+        \Log::info('새로 생성된 입주자 일정:', [
+            'id' => $newTenant->id,
+            'name' => $newTenant->name,
+            'room_id' => $newTenant->room_id,
+            'move_in_date' => $newTenant->move_in_date,
+            'move_out_date' => $newTenant->move_out_date,
         ]);
 
         // 방 상태 업데이트
         $room->update([
             'status' => 'occupied',
-            'tenant_name' => $selectedTenant->name,
+            'tenant_name' => $newTenant->name,
             'move_in_date' => $this->moveInDate,
             'move_out_date' => $this->moveOutDate,
         ]);
