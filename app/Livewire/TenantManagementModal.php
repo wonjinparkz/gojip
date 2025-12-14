@@ -17,11 +17,17 @@ class TenantManagementModal extends Component
     public $name = '';
     public $phone = '';
     public $gender = null;
+    public $move_in_date = null;
+    public $move_out_date = null;
+    public $indefinite_move_out = false;
     public $last_payment_date = null;
     public $payment_method = null;
     public $payment_status = 'pending';
     public $is_blacklisted = false;
     public $blacklist_memo = '';
+    public $is_short_term = false;
+    public $short_term_monthly_rent = null;
+    public $short_term_deposit = null;
 
     #[On('open-tenant-management-modal')]
     public function openCreate()
@@ -40,11 +46,17 @@ class TenantManagementModal extends Component
         $this->name = $tenant->name;
         $this->phone = $tenant->phone;
         $this->gender = $tenant->gender;
+        $this->move_in_date = $tenant->move_in_date?->format('Y-m-d');
+        $this->move_out_date = $tenant->move_out_date?->format('Y-m-d');
+        $this->indefinite_move_out = $tenant->indefinite_move_out ?? false;
         $this->last_payment_date = $tenant->last_payment_date?->format('Y-m-d');
         $this->payment_method = $tenant->payment_method;
         $this->payment_status = $tenant->payment_status;
         $this->is_blacklisted = $tenant->is_blacklisted;
         $this->blacklist_memo = $tenant->blacklist_memo ?? '';
+        $this->is_short_term = $tenant->is_short_term ?? false;
+        $this->short_term_monthly_rent = $tenant->short_term_monthly_rent;
+        $this->short_term_deposit = $tenant->short_term_deposit;
 
         $this->show = true;
     }
@@ -66,6 +78,17 @@ class TenantManagementModal extends Component
         }
     }
 
+    public function updatedIndefiniteMoveOut($value)
+    {
+        // 퇴실일 미정 체크박스가 체크되면 입실일 이후 날짜로 설정
+        if ($value) {
+            // 입실일이 미래면 입실일과 동일하게, 아니면 오늘 날짜로
+            $moveInDate = $this->move_in_date ? \Carbon\Carbon::parse($this->move_in_date) : now();
+            $this->move_out_date = $moveInDate->isFuture() ? $moveInDate->format('Y-m-d') : now()->format('Y-m-d');
+        }
+    }
+
+
     public function close()
     {
         $this->show = false;
@@ -74,16 +97,32 @@ class TenantManagementModal extends Component
 
     public function save()
     {
-        $this->validate([
+        \Log::info('TenantManagementModal save called', [
+            'move_in_date' => $this->move_in_date,
+            'move_out_date' => $this->move_out_date,
+            'indefinite_move_out' => $this->indefinite_move_out,
+        ]);
+
+        $rules = [
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:255',
             'gender' => 'nullable|in:male,female',
+            'move_in_date' => 'nullable|date',
+            'move_out_date' => 'nullable|date|after_or_equal:move_in_date',
             'last_payment_date' => 'nullable|date',
             'payment_method' => 'nullable|in:card,transfer,cash',
             'payment_status' => 'required|in:paid,pending,overdue,waiting',
             'is_blacklisted' => 'boolean',
             'blacklist_memo' => 'nullable|string|max:65535',
-        ]);
+        ];
+
+        // 단기숙박인 경우 추가 검증
+        if ($this->is_short_term) {
+            $rules['short_term_monthly_rent'] = 'required|integer|min:0';
+            $rules['short_term_deposit'] = 'nullable|integer|min:0';
+        }
+
+        $this->validate($rules);
 
         $branchId = session('current_branch_id');
         \Log::info('TenantManagementModal save - Session branch_id:', ['branch_id' => $branchId]);
@@ -114,11 +153,17 @@ class TenantManagementModal extends Component
             'name' => $this->name,
             'phone' => $this->phone,
             'gender' => $this->gender,
+            'move_in_date' => $this->move_in_date,
+            'move_out_date' => $this->move_out_date,
+            'indefinite_move_out' => $this->indefinite_move_out,
             'last_payment_date' => $this->last_payment_date,
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
             'is_blacklisted' => $this->is_blacklisted,
             'blacklist_memo' => $this->blacklist_memo,
+            'is_short_term' => $this->is_short_term,
+            'short_term_monthly_rent' => $this->is_short_term ? $this->short_term_monthly_rent : null,
+            'short_term_deposit' => $this->is_short_term ? ($this->short_term_deposit ?? 0) : null,
         ];
 
         if ($this->editingTenantId) {

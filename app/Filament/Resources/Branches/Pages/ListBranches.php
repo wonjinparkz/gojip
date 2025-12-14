@@ -14,11 +14,9 @@ class ListBranches extends ListRecords
     {
         return [
             CreateAction::make()
-                ->url(null)
-                ->extraAttributes([
-                    'onclick' => 'openAddBranchModal(); return false;',
-                    'type' => 'button',
-                ]),
+                ->label('지점 추가하기')
+                ->icon('heroicon-o-plus')
+                ->color('primary'),
         ];
     }
 }

@@ -53,6 +53,20 @@
             >
                 <div style="padding: 0.75rem; max-height: 200px; overflow-y: auto;">
                     <!-- Card Header -->
+                    @php
+                        // 현재 입주 중인 tenant 정보 가져오기
+                        $today = now()->format('Y-m-d');
+                        $currentTenant = \App\Models\Tenant::where('room_id', $room->id)
+                            ->whereNotNull('move_in_date')
+                            ->whereDate('move_in_date', '<=', $today)
+                            ->where(function($query) use ($today) {
+                                $query->whereNull('move_out_date')
+                                    ->orWhereDate('move_out_date', '>=', $today);
+                            })
+                            ->orderBy('move_in_date', 'desc')
+                            ->first();
+                    @endphp
+
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
                         <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem;">
                             <span style="font-weight: 500; color: #1f2937; font-size: 0.875rem;">{{ $room->room_number }}호</span>
@@ -60,6 +74,11 @@
                                 <div style="display: inline-flex; align-items: center; border-radius: 9999px; border: 1px solid #40c0c0; font-weight: 600; margin-left: 0.25rem; padding: 0 0.25rem; height: 1rem; font-size: 10px; background-color: #40c0c0; color: white;">
                                     사용중
                                 </div>
+                                @if($currentTenant && $currentTenant->is_short_term)
+                                    <div style="display: inline-flex; align-items: center; border-radius: 9999px; border: 1px solid #f59e0b; font-weight: 600; margin-left: 0.25rem; padding: 0 0.25rem; height: 1rem; font-size: 10px; background-color: #f59e0b; color: white;">
+                                        단기숙박
+                                    </div>
+                                @endif
                             @else
                                 <div style="display: inline-flex; align-items: center; border-radius: 9999px; border: 1px solid #9ca3af; font-weight: 600; margin-left: 0.25rem; padding: 0 0.25rem; height: 1rem; font-size: 10px; background-color: #9ca3af; color: white;">
                                     공실
@@ -74,10 +93,14 @@
                         <div style="text-align: right;">{{ $room->room_type }}</div>
 
                         <div style="color: #6b7280;">월세</div>
-                        <div style="text-align: right; font-weight: 500;">₩{{ number_format($room->monthly_rent) }}</div>
+                        <div style="text-align: right; font-weight: 500;">
+                            ₩{{ number_format($room->monthly_rent) }}@if($currentTenant && $currentTenant->is_short_term && $currentTenant->short_term_monthly_rent)<span style="font-size: 0.65rem; color: #f59e0b; font-weight: 400;"> (단기 ₩{{ number_format($currentTenant->short_term_monthly_rent) }})</span>@endif
+                        </div>
 
                         <div style="color: #6b7280;">보증금</div>
-                        <div style="text-align: right; font-weight: 500;">₩{{ number_format($room->deposit) }}</div>
+                        <div style="text-align: right; font-weight: 500;">
+                            ₩{{ number_format($room->deposit) }}@if($currentTenant && $currentTenant->is_short_term && $currentTenant->short_term_deposit !== null)<span style="font-size: 0.65rem; color: #f59e0b; font-weight: 400;"> (단기 ₩{{ number_format($currentTenant->short_term_deposit) }})</span>@endif
+                        </div>
                     </div>
 
                     <!-- Divider and Tenant Info -->
@@ -100,9 +123,89 @@
         </div>
 
         <!-- Pagination -->
-        <div style="margin-top: 1.5rem;">
-            {{ $this->getRooms()->links() }}
+        @php
+            $rooms = $this->getRooms();
+        @endphp
+        @if($rooms->hasPages())
+        <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <!-- Page Info -->
+            <div style="font-size: 0.875rem; color: #6b7280;">
+                <span style="font-weight: 500; color: #111827;">{{ $rooms->firstItem() ?? 0 }}</span>
+                -
+                <span style="font-weight: 500; color: #111827;">{{ $rooms->lastItem() ?? 0 }}</span>
+                /
+                <span style="font-weight: 500; color: #111827;">{{ $rooms->total() }}</span>
+                개 호실
+            </div>
+
+            <!-- Pagination Links -->
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <!-- Previous Button -->
+                @if($rooms->onFirstPage())
+                    <button disabled
+                            style="padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; background: #f9fafb; color: #d1d5db; font-size: 0.875rem; cursor: not-allowed; display: flex; align-items: center; gap: 0.25rem;">
+                        <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                @else
+                    <button wire:click="previousPage"
+                            style="padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; background: white; color: #374151; font-size: 0.875rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; transition: all 0.2s;"
+                            onmouseover="this.style.borderColor='#1EC3B0'; this.style.color='#1EC3B0';"
+                            onmouseout="this.style.borderColor='#e5e7eb'; this.style.color='#374151';">
+                        <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                @endif
+
+                <!-- Page Numbers -->
+                @foreach(range(1, $rooms->lastPage()) as $page)
+                    @if($page == $rooms->currentPage())
+                        <button disabled
+                                style="padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid #1EC3B0; background: #1EC3B0; color: white; font-size: 0.875rem; font-weight: 500; min-width: 2.5rem; cursor: default;">
+                            {{ $page }}
+                        </button>
+                    @elseif(
+                        $page == 1 ||
+                        $page == $rooms->lastPage() ||
+                        abs($page - $rooms->currentPage()) <= 2
+                    )
+                        <button wire:click="gotoPage({{ $page }})"
+                                style="padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; background: white; color: #374151; font-size: 0.875rem; font-weight: 500; min-width: 2.5rem; cursor: pointer; transition: all 0.2s;"
+                                onmouseover="this.style.borderColor='#1EC3B0'; this.style.backgroundColor='#f0fdfa'; this.style.color='#1EC3B0';"
+                                onmouseout="this.style.borderColor='#e5e7eb'; this.style.backgroundColor='white'; this.style.color='#374151';">
+                            {{ $page }}
+                        </button>
+                    @elseif(
+                        $page == 2 && $rooms->currentPage() > 4 ||
+                        $page == $rooms->lastPage() - 1 && $rooms->currentPage() < $rooms->lastPage() - 3
+                    )
+                        <span style="padding: 0.5rem 0.25rem; color: #9ca3af;">...</span>
+                    @endif
+                @endforeach
+
+                <!-- Next Button -->
+                @if($rooms->hasMorePages())
+                    <button wire:click="nextPage"
+                            style="padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; background: white; color: #374151; font-size: 0.875rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; transition: all 0.2s;"
+                            onmouseover="this.style.borderColor='#1EC3B0'; this.style.color='#1EC3B0';"
+                            onmouseout="this.style.borderColor='#e5e7eb'; this.style.color='#374151';">
+                        <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                @else
+                    <button disabled
+                            style="padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; background: #f9fafb; color: #d1d5db; font-size: 0.875rem; cursor: not-allowed; display: flex; align-items: center; gap: 0.25rem;">
+                        <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                @endif
+            </div>
         </div>
+        @endif
     </div>
 
     <!-- View Modal -->

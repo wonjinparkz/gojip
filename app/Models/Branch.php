@@ -26,8 +26,6 @@ class Branch extends Model
         'end_floor' => 'integer',
     ];
 
-    protected $appends = ['phone_numbers'];
-
     /**
      * 전화번호 배열을 콤마로 구분된 문자열로 변환하여 저장하고,
      * 읽을 때는 다시 배열로 변환

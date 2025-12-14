@@ -18,6 +18,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/pricing', function () {
+    return view('pricing');
+})->name('pricing');
+
 // Social Login Routes
 Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirectToProvider'])->name('social.redirect');
 Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'handleProviderCallback'])->name('social.callback');
@@ -85,6 +89,47 @@ Route::middleware([
 
         return response()->json(['success' => true, 'branch' => $branch]);
     })->name('filament.admin.pages.add-branch');
+
+    // Branch data endpoint (for edit modal)
+    Route::get('/admin/branches/{branch}/data', function (\App\Models\Branch $branch) {
+        $user = auth()->user();
+
+        // Verify user owns this branch
+        if (!$user->branches->contains($branch)) {
+            abort(403);
+        }
+
+        return response()->json([
+            'id' => $branch->id,
+            'name' => $branch->name,
+            'address' => $branch->address,
+            'phone' => $branch->phone,
+        ]);
+    })->name('branches.data');
+
+    // Branch update endpoint
+    Route::post('/admin/branches/{branch}/update', function (\App\Models\Branch $branch) {
+        $user = auth()->user();
+
+        // Verify user owns this branch
+        if (!$user->branches->contains($branch)) {
+            abort(403);
+        }
+
+        $validated = request()->validate([
+            'name' => 'required|string|max:255',
+            'address' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:255',
+        ]);
+
+        $branch->update([
+            'name' => $validated['name'],
+            'address' => $validated['address'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+        ]);
+
+        return response()->json(['success' => true, 'branch' => $branch]);
+    })->name('branches.update');
 
     // Tenant quick create endpoint (for modal)
     Route::post('/admin/tenants/quick-create', function () {

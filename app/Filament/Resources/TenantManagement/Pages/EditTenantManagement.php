@@ -16,4 +16,15 @@ class EditTenantManagement extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // 단기숙박이 아닌 경우 관련 필드 null 처리
+        if (!($data['is_short_term'] ?? false)) {
+            $data['short_term_monthly_rent'] = null;
+            $data['short_term_deposit'] = null;
+        }
+
+        return $data;
+    }
 }

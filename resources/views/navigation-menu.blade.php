@@ -7,6 +7,13 @@
                 <div class="text-2xl font-bold text-gray-900">
                     <a href="/">고집</a>
                 </div>
+
+                <!-- Navigation Links -->
+                <div class="hidden sm:flex sm:items-center sm:ms-10 space-x-8">
+                    <a href="{{ route('pricing') }}" class="text-sm font-medium text-gray-700 hover:text-teal-400 transition duration-150">
+                        요금제
+                    </a>
+                </div>
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
@@ -84,6 +91,13 @@
 
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
+        <!-- Responsive Navigation Links -->
+        <div class="pt-2 pb-3 space-y-1">
+            <x-responsive-nav-link href="{{ route('pricing') }}" :active="request()->routeIs('pricing')">
+                요금제
+            </x-responsive-nav-link>
+        </div>
+
         @auth
             <!-- Responsive Settings Options -->
             <div class="pt-4 pb-1 border-t border-gray-200">

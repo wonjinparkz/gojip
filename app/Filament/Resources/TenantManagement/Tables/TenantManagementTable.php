@@ -22,11 +22,11 @@ class TenantManagementTable
                     ->formatStateUsing(function ($record) {
                         if ($record->is_blacklisted) {
                             return '<div style="line-height: 1.3;">
-                                        <div style="font-size: 0.7rem; color: #ef4444; font-weight: 500; margin-bottom: 0.125rem;">블랙리스트</div>
-                                        <div style="color: #ef4444; font-weight: 500;">' . e($record->name) . '</div>
+                                        <div style="font-size: 0.7rem; color: #ef4444; font-weight: 600; margin-bottom: 0.125rem;">블랙리스트</div>
+                                        <div style="color: #ef4444; font-weight: 600;">' . e($record->name) . '</div>
                                     </div>';
                         }
-                        return e($record->name);
+                        return '<span style="font-weight: 600;">' . e($record->name) . '</span>';
                     })
                     ->html()
                     ->action(
@@ -122,34 +122,44 @@ class TenantManagementTable
                         switch ($status) {
                             case 'checked_in':
                                 // 입실 완료했고, 퇴실 완료나 청소 중이 아닌 경우
-                                return $query->whereHas('room', function (Builder $q) {
-                                    $q->whereNotNull('check_in_completed_at')
-                                      ->whereNull('check_out_completed_at')
-                                      ->whereNull('cleaning_status');
-                                });
+                                return $query->whereNotNull('room_id')
+                                    ->whereExists(function ($q) {
+                                        $q->selectRaw(1)
+                                          ->from('rooms')
+                                          ->whereColumn('rooms.id', 'tenants.room_id')
+                                          ->whereNotNull('rooms.check_in_completed_at')
+                                          ->whereNull('rooms.check_out_completed_at')
+                                          ->whereNull('rooms.cleaning_status');
+                                    });
                             case 'checked_out':
                                 // 퇴실 완료했거나 청소 대기/완료인 경우
-                                return $query->whereHas('room', function (Builder $q) {
-                                    $q->where(function ($q2) {
-                                        $q2->whereNotNull('check_out_completed_at')
-                                           ->orWhereIn('cleaning_status', ['waiting', 'completed']);
+                                return $query->whereNotNull('room_id')
+                                    ->whereExists(function ($q) {
+                                        $q->selectRaw(1)
+                                          ->from('rooms')
+                                          ->whereColumn('rooms.id', 'tenants.room_id')
+                                          ->where(function ($q2) {
+                                              $q2->whereNotNull('rooms.check_out_completed_at')
+                                                 ->orWhereIn('rooms.cleaning_status', ['waiting', 'completed']);
+                                          });
                                     });
-                                });
                             case 'scheduled':
-                                // 입실 예정 (입실 완료 안됨)
-                                return $query->whereHas('room', function (Builder $q) {
-                                    $q->whereNull('check_in_completed_at');
-                                });
+                                // 입실 예정 (호실 배정됨 + Room의 입주일이 오늘 이후 + 입실 완료 안됨 + 퇴실 안됨 + 청소 아님)
+                                return $query->whereNotNull('room_id')
+                                    ->whereExists(function ($q) {
+                                        $today = now()->format('Y-m-d');
+                                        $q->selectRaw(1)
+                                          ->from('rooms')
+                                          ->whereColumn('rooms.id', 'tenants.room_id')
+                                          ->whereNotNull('rooms.move_in_date')
+                                          ->whereDate('rooms.move_in_date', '>=', $today)
+                                          ->whereNull('rooms.check_in_completed_at')
+                                          ->whereNull('rooms.check_out_completed_at')
+                                          ->whereNull('rooms.cleaning_status');
+                                    });
                             case 'pending':
-                                // 대기 (room_id가 없거나, 입실/퇴실 완료 안됨)
-                                return $query->where(function (Builder $q) {
-                                    $q->whereNull('room_id')
-                                      ->orWhereHas('room', function (Builder $q2) {
-                                          $q2->whereNull('check_in_completed_at')
-                                             ->whereNull('check_out_completed_at')
-                                             ->whereNull('cleaning_status');
-                                      });
-                                });
+                                // 대기 (room_id가 없는 경우만)
+                                return $query->whereNull('room_id');
                         }
 
                         return $query;

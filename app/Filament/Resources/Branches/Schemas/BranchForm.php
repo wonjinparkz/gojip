@@ -33,9 +33,17 @@ class BranchForm
                             ])
                             ->defaultItems(1)
                             ->addActionLabel('전화번호 추가')
-                            ->simple()
                             ->columns(1)
-                            ->columnSpan(3),
+                            ->columnSpan(3)
+                            ->afterStateHydrated(function ($component, $state, $record) {
+                                // DB에서 불러올 때: phone 필드를 배열로 변환
+                                if ($record && $record->phone) {
+                                    $phones = explode(',', $record->phone);
+                                    $phoneArray = array_map(fn($phone) => ['number' => trim($phone)], $phones);
+                                    $component->state($phoneArray);
+                                }
+                            })
+                            ->dehydrated(false), // 직접 저장하지 않고 mutateFormDataBeforeCreate/Update에서 처리
                         Forms\Components\TextInput::make('start_floor')
                             ->label('시작 층수')
                             ->required()

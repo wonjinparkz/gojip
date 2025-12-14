@@ -17,7 +17,8 @@ class TenantsTable
                 Tables\Columns\TextColumn::make('name')
                     ->label('이름')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->weight('bold'),
                 Tables\Columns\TextColumn::make('phone')
                     ->label('연락처')
                     ->searchable(),

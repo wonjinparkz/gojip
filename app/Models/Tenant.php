@@ -29,6 +29,9 @@ class Tenant extends Model
         'status',
         'is_blacklisted',
         'blacklist_memo',
+        'is_short_term',
+        'short_term_monthly_rent',
+        'short_term_deposit',
     ];
 
     protected $casts = [
@@ -37,6 +40,7 @@ class Tenant extends Model
         'move_out_date' => 'date',
         'indefinite_move_out' => 'boolean',
         'is_blacklisted' => 'boolean',
+        'is_short_term' => 'boolean',
     ];
 
     public function user(): BelongsTo
@@ -112,8 +116,8 @@ class Tenant extends Model
             return 'checked_in';
         }
 
-        // 입실 예정
-        if ($this->move_in_date && $this->move_in_date->isFuture()) {
+        // 입실 예정 (Room에 입주일이 있고 입실 완료 안됨)
+        if ($room->move_in_date) {
             return 'scheduled';
         }
 

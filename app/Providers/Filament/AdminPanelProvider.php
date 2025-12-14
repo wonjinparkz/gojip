@@ -55,6 +55,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\CheckOnboardingCompleted::class,
             ])
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
@@ -105,6 +106,63 @@ class AdminPanelProvider extends PanelProvider
                         align-items: center;
                         justify-content: flex-start;
                         gap: 0.175rem;
+                        transition: transform 0.3s ease-in-out;
+                    }
+
+                    /* Mobile toggle button */
+                    .footer-toggle-button {
+                        position: fixed;
+                        bottom: 1rem;
+                        left: 1rem;
+                        z-index: 40;
+                        display: none;
+                        align-items: center;
+                        justify-content: center;
+                        width: 3rem;
+                        height: 3rem;
+                        background-color: #1EC3B0;
+                        color: white;
+                        border-radius: 50%;
+                        border: none;
+                        cursor: pointer;
+                        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                        transition: all 0.3s ease-in-out;
+                    }
+
+                    .footer-toggle-button:hover {
+                        background-color: #1AB5A3;
+                        transform: translateY(-2px);
+                        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                    }
+
+                    .footer-toggle-button svg {
+                        width: 1.5rem;
+                        height: 1.5rem;
+                        transition: transform 0.3s ease-in-out;
+                    }
+
+                    /* Mobile styles */
+                    @media (max-width: 768px) {
+                        .custom-footer-bar {
+                            left: 0;
+                            transform: translateY(100%);
+                        }
+
+                        .custom-footer-bar.visible {
+                            transform: translateY(0);
+                        }
+
+                        .footer-toggle-button {
+                            display: flex;
+                        }
+
+                        .footer-toggle-button.footer-visible {
+                            bottom: 5rem;
+                        }
+
+                        .footer-toggle-button.footer-visible svg {
+                            transform: rotate(180deg);
+                        }
                     }
 
                     /* Icon button for add and menu */
@@ -135,6 +193,37 @@ class AdminPanelProvider extends PanelProvider
                     .icon-button svg {
                         width: 0.875rem;
                         height: 0.875rem;
+                    }
+
+                    /* Branch badges scrollable container */
+                    .branch-badges-container {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.175rem;
+                        overflow-x: auto;
+                        overflow-y: hidden;
+                        flex: 1;
+                        max-width: 100%;
+                        padding: 0.25rem 0;
+                        scrollbar-width: thin;
+                        scrollbar-color: #d1d5db transparent;
+                    }
+
+                    .branch-badges-container::-webkit-scrollbar {
+                        height: 6px;
+                    }
+
+                    .branch-badges-container::-webkit-scrollbar-track {
+                        background: transparent;
+                    }
+
+                    .branch-badges-container::-webkit-scrollbar-thumb {
+                        background: #d1d5db;
+                        border-radius: 3px;
+                    }
+
+                    .branch-badges-container::-webkit-scrollbar-thumb:hover {
+                        background: #9ca3af;
                     }
 
                     /* Branch badge button */
@@ -184,13 +273,46 @@ class AdminPanelProvider extends PanelProvider
 
                     /* Force white text color for primary buttons */
                     .fi-btn-primary,
-                    [data-variant="primary"] {
+                    [data-variant="primary"],
+                    .fi-btn.fi-color-primary,
+                    .fi-ac-btn-action.fi-color-primary,
+                    .fi-ac-btn-group.fi-color-primary {
                         color: #ffffff !important;
+                        font-weight: bold !important;
                     }
 
                     .fi-btn-primary svg,
-                    [data-variant="primary"] svg {
+                    [data-variant="primary"] svg,
+                    .fi-btn.fi-color-primary svg,
+                    .fi-ac-btn-action.fi-color-primary svg,
+                    .fi-ac-btn-group.fi-color-primary svg {
                         color: #ffffff !important;
+                        stroke: #ffffff !important;
+                    }
+
+                    /* Override Filament's text color classes for primary buttons */
+                    .fi-btn.fi-color-primary .fi-icon,
+                    .fi-ac-btn-action.fi-color-primary .fi-icon,
+                    .fi-ac-btn-group.fi-color-primary .fi-icon {
+                        color: #ffffff !important;
+                        stroke: #ffffff !important;
+                    }
+
+                    /* Secondary/Cancel buttons - ensure proper styling */
+                    .fi-ac-btn-action:not(.fi-color-primary) {
+                        color: #374151 !important;
+                        background-color: #ffffff !important;
+                        border: 1px solid #d1d5db !important;
+                    }
+
+                    .fi-ac-btn-action:not(.fi-color-primary):hover {
+                        background-color: #f9fafb !important;
+                    }
+
+                    /* Dropdown list items in action groups */
+                    .fi-dropdown-list-item.fi-ac-grouped-action .fi-icon {
+                        color: inherit !important;
+                        stroke: currentColor !important;
                     }
 
                     /* Branch dropdown styles */
@@ -280,6 +402,14 @@ class AdminPanelProvider extends PanelProvider
                         dropdown.style.display = isHidden ? 'block' : 'none';
                     }
 
+                    function toggleFooterBar() {
+                        const footerBar = document.querySelector('.custom-footer-bar');
+                        const toggleButton = document.querySelector('.footer-toggle-button');
+
+                        footerBar.classList.toggle('visible');
+                        toggleButton.classList.toggle('footer-visible');
+                    }
+
                     function addPhoneNumberField() {
                         const container = document.getElementById('phone-numbers-container');
                         const newRow = document.createElement('div');
@@ -340,9 +470,194 @@ class AdminPanelProvider extends PanelProvider
                         if (firstInput) {
                             firstInput.value = '';
                         }
+
+                        // Reset submit button state
+                        isSubmittingAddBranch = false;
+                        const submitButton = document.querySelector('[data-testid="button-confirm-add"]');
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.style.opacity = '1';
+                            submitButton.style.cursor = 'pointer';
+                            submitButton.textContent = '추가';
+                        }
                     }
 
+                    async function openEditBranchModal(branchId) {
+                        try {
+                            // Fetch branch data
+                            const response = await fetch(`/admin/branches/${branchId}/data`);
+                            const branch = await response.json();
+
+                            // Populate form fields
+                            document.getElementById('editBranchId').value = branch.id;
+                            document.getElementById('editBranchName').value = branch.name || '';
+                            document.getElementById('editBranchAddress').value = branch.address || '';
+
+                            // Clear existing phone numbers
+                            const container = document.getElementById('edit-phone-numbers-container');
+                            container.innerHTML = '';
+
+                            // Add phone numbers
+                            const phoneNumbers = branch.phone ? branch.phone.split(',') : [''];
+                            phoneNumbers.forEach((phone, index) => {
+                                const isFirst = index === 0;
+                                const row = document.createElement('div');
+                                row.className = 'phone-number-row';
+                                row.style.cssText = 'display: flex; gap: 0.5rem; align-items: center;';
+
+                                row.innerHTML = `
+                                    <input type="text" class="branch-phone-input" value="${phone.trim()}" placeholder="예: 02-1234-5678" pattern="[0-9-]+" style="flex: 1; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none;">
+                                    ${isFirst ? `
+                                        <button type="button" onclick="addEditPhoneNumberField()" style="display: inline-flex; align-items: center; justify-content: center; height: 2.5rem; width: 2.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; color: #1EC3B0; cursor: pointer; flex-shrink: 0;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M5 12h14"></path>
+                                                <path d="M12 5v14"></path>
+                                            </svg>
+                                        </button>
+                                    ` : `
+                                        <button type="button" onclick="removeEditPhoneNumberField(this)" style="display: inline-flex; align-items: center; justify-content: center; height: 2.5rem; width: 2.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; color: #ef4444; cursor: pointer; flex-shrink: 0;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M5 12h14"></path>
+                                            </svg>
+                                        </button>
+                                    `}
+                                `;
+
+                                container.appendChild(row);
+
+                                // Add input filter
+                                const input = row.querySelector('.branch-phone-input');
+                                input.addEventListener('input', function(e) {
+                                    this.value = this.value.replace(/[^0-9-]/g, '');
+                                });
+                            });
+
+                            // Show modal
+                            document.getElementById('edit-branch-modal').style.display = 'flex';
+                        } catch (error) {
+                            console.error('Error:', error);
+                            alert('지점 정보를 불러오는데 실패했습니다.');
+                        }
+                    }
+
+                    function closeEditBranchModal() {
+                        document.getElementById('edit-branch-modal').style.display = 'none';
+                        document.getElementById('edit-branch-form').reset();
+
+                        // Reset submit button state
+                        isSubmittingEditBranch = false;
+                        const submitButton = document.querySelector('#edit-branch-modal [onclick="submitEditBranch()"]');
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.style.opacity = '1';
+                            submitButton.style.cursor = 'pointer';
+                            submitButton.textContent = '수정';
+                        }
+                    }
+
+                    function addEditPhoneNumberField() {
+                        const container = document.getElementById('edit-phone-numbers-container');
+                        const newRow = document.createElement('div');
+                        newRow.className = 'phone-number-row';
+                        newRow.style.cssText = 'display: flex; gap: 0.5rem; align-items: center;';
+
+                        newRow.innerHTML = `
+                            <input type="text" class="branch-phone-input" placeholder="예: 02-1234-5678" pattern="[0-9-]+" style="flex: 1; height: 2.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none;">
+                            <button type="button" onclick="removeEditPhoneNumberField(this)" style="display: inline-flex; align-items: center; justify-content: center; height: 2.5rem; width: 2.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; color: #ef4444; cursor: pointer; flex-shrink: 0;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M5 12h14"></path>
+                                </svg>
+                            </button>
+                        `;
+
+                        container.appendChild(newRow);
+
+                        const newInput = newRow.querySelector('.branch-phone-input');
+                        newInput.addEventListener('input', function(e) {
+                            this.value = this.value.replace(/[^0-9-]/g, '');
+                        });
+                    }
+
+                    function removeEditPhoneNumberField(button) {
+                        button.parentElement.remove();
+                    }
+
+                    let isSubmittingEditBranch = false;
+
+                    async function submitEditBranch() {
+                        // Prevent duplicate submissions
+                        if (isSubmittingEditBranch) {
+                            return;
+                        }
+
+                        const id = document.getElementById('editBranchId').value;
+                        const name = document.getElementById('editBranchName').value;
+                        const address = document.getElementById('editBranchAddress').value;
+
+                        // Collect all phone numbers
+                        const phoneInputs = document.querySelectorAll('#edit-phone-numbers-container .branch-phone-input');
+                        const phoneNumbers = Array.from(phoneInputs)
+                            .map(input => input.value.trim())
+                            .filter(phone => phone !== '');
+                        const phone = phoneNumbers.join(',');
+
+                        if (!name) {
+                            alert('지점명을 입력해주세요.');
+                            return;
+                        }
+
+                        // Get the submit button and disable it
+                        const submitButton = document.querySelector('#edit-branch-modal [onclick="submitEditBranch()"]');
+                        const originalButtonText = submitButton.textContent;
+
+                        try {
+                            // Set submitting state
+                            isSubmittingEditBranch = true;
+                            submitButton.disabled = true;
+                            submitButton.style.opacity = '0.6';
+                            submitButton.style.cursor = 'not-allowed';
+                            submitButton.textContent = '처리 중...';
+
+                            const response = await fetch(`/admin/branches/${id}/update`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                },
+                                body: JSON.stringify({ name, address, phone })
+                            });
+
+                            if (response.ok) {
+                                window.location.reload();
+                            } else {
+                                alert('지점 수정에 실패했습니다.');
+                                // Reset button state on error
+                                isSubmittingEditBranch = false;
+                                submitButton.disabled = false;
+                                submitButton.style.opacity = '1';
+                                submitButton.style.cursor = 'pointer';
+                                submitButton.textContent = originalButtonText;
+                            }
+                        } catch (error) {
+                            console.error('Error:', error);
+                            alert('오류가 발생했습니다.');
+                            // Reset button state on error
+                            isSubmittingEditBranch = false;
+                            submitButton.disabled = false;
+                            submitButton.style.opacity = '1';
+                            submitButton.style.cursor = 'pointer';
+                            submitButton.textContent = originalButtonText;
+                        }
+                    }
+
+                    let isSubmittingAddBranch = false;
+
                     async function submitAddBranch() {
+                        // Prevent duplicate submissions
+                        if (isSubmittingAddBranch) {
+                            return;
+                        }
+
                         const name = document.getElementById('branchName').value;
                         const address = document.getElementById('branchAddress').value;
 
@@ -358,7 +673,18 @@ class AdminPanelProvider extends PanelProvider
                             return;
                         }
 
+                        // Get the submit button and disable it
+                        const submitButton = document.querySelector('[data-testid="button-confirm-add"]');
+                        const originalButtonText = submitButton.textContent;
+
                         try {
+                            // Set submitting state
+                            isSubmittingAddBranch = true;
+                            submitButton.disabled = true;
+                            submitButton.style.opacity = '0.6';
+                            submitButton.style.cursor = 'not-allowed';
+                            submitButton.textContent = '처리 중...';
+
                             const response = await fetch('{{ route("filament.admin.pages.add-branch") }}', {
                                 method: 'POST',
                                 headers: {
@@ -372,10 +698,22 @@ class AdminPanelProvider extends PanelProvider
                                 window.location.reload();
                             } else {
                                 alert('지점 추가에 실패했습니다.');
+                                // Reset button state on error
+                                isSubmittingAddBranch = false;
+                                submitButton.disabled = false;
+                                submitButton.style.opacity = '1';
+                                submitButton.style.cursor = 'pointer';
+                                submitButton.textContent = originalButtonText;
                             }
                         } catch (error) {
                             console.error('Error:', error);
                             alert('오류가 발생했습니다.');
+                            // Reset button state on error
+                            isSubmittingAddBranch = false;
+                            submitButton.disabled = false;
+                            submitButton.style.opacity = '1';
+                            submitButton.style.cursor = 'pointer';
+                            submitButton.textContent = originalButtonText;
                         }
                     }
 
@@ -391,6 +729,13 @@ class AdminPanelProvider extends PanelProvider
                         }
                     });
                 </script>
+
+                <!-- Mobile Footer Toggle Button -->
+                <button class="footer-toggle-button" onclick="toggleFooterBar()" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m18 15-6-6-6 6"/>
+                    </svg>
+                </button>
 
                 <div class="custom-footer-bar">
                     @auth
@@ -461,19 +806,22 @@ class AdminPanelProvider extends PanelProvider
                             </div>
                         </div>
 
-                        @if($branches->count() > 0)
-                            @foreach($branches as $branch)
-                                <button
-                                    class="branch-badge {{ $branch->id === $currentBranchId ? 'branch-badge-active' : 'branch-badge-inactive' }}"
-                                    onclick="window.location.href='{{ route('filament.admin.pages.switch-branch', ['branch' => $branch->id]) }}'"
-                                    data-testid="button-branch-{{ $branch->id }}"
-                                >
-                                    <span class="text-xs md:text-sm">{{ $branch->name }}</span>
-                                </button>
-                            @endforeach
-                        @else
-                            <span class="text-sm text-gray-600">지점 정보가 없습니다</span>
-                        @endif
+                        <!-- Scrollable Branch Badges Container -->
+                        <div class="branch-badges-container">
+                            @if($branches->count() > 0)
+                                @foreach($branches as $branch)
+                                    <button
+                                        class="branch-badge {{ $branch->id === $currentBranchId ? 'branch-badge-active' : 'branch-badge-inactive' }}"
+                                        onclick="window.location.href='{{ route('filament.admin.pages.switch-branch', ['branch' => $branch->id]) }}'"
+                                        data-testid="button-branch-{{ $branch->id }}"
+                                    >
+                                        <span class="text-xs md:text-sm">{{ $branch->name }}</span>
+                                    </button>
+                                @endforeach
+                            @else
+                                <span class="text-sm text-gray-600">지점 정보가 없습니다</span>
+                            @endif
+                        </div>
                     @endauth
                 </div>
 
@@ -517,6 +865,47 @@ class AdminPanelProvider extends PanelProvider
                             </div>
                         </form>
                         <button type="button" onclick="closeAddBranchModal()" style="position: absolute; right: 1rem; top: 1rem; border-radius: 0.125rem; opacity: 0.7; background: none; border: none; cursor: pointer;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1rem; width: 1rem;">
+                                <path d="M18 6 6 18"></path>
+                                <path d="m6 6 12 12"></path>
+                            </svg>
+                            <span style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;">Close</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Edit Branch Modal -->
+                <div id="edit-branch-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; background-color: rgba(0, 0, 0, 0.5); align-items: center; justify-content: center;">
+                    <div style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 50; display: grid; width: 100%; gap: 1rem; border: 1px solid #e5e7eb; background: white; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); max-width: 28rem; border-radius: 0.5rem;">
+                        <div style="display: flex; flex-direction: column; gap: 0.375rem; text-align: center;">
+                            <h2 style="font-size: 1.125rem; font-weight: 600; line-height: 1.25; letter-spacing: -0.025em;">지점 정보 수정</h2>
+                            <p style="font-size: 0.875rem; color: #6b7280;">지점의 정보를 수정해주세요.</p>
+                        </div>
+                        <form id="edit-branch-form" style="display: flex; flex-direction: column; gap: 1rem; padding: 1rem 0;">
+                            <input type="hidden" id="editBranchId">
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label for="editBranchName" style="font-size: 0.875rem; font-weight: 500; line-height: 1.25;">지점명 *</label>
+                                <input id="editBranchName" type="text" placeholder="예: 강남점" style="display: flex; height: 2.5rem; width: 100%; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none;">
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label for="editBranchAddress" style="font-size: 0.875rem; font-weight: 500; line-height: 1.25;">주소</label>
+                                <input id="editBranchAddress" type="text" placeholder="예: 서울시 강남구 테헤란로" style="display: flex; height: 2.5rem; width: 100%; border-radius: 0.375rem; border: 1px solid #d1d5db; background: white; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none;">
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <label style="font-size: 0.875rem; font-weight: 500; line-height: 1.25;">전화번호</label>
+                                <div id="edit-phone-numbers-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                                <button type="button" onclick="closeEditBranchModal()" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; height: 2.5rem; padding: 0.5rem 1rem; border: 1px solid #d1d5db; background: white; color: #374151; cursor: pointer;">
+                                    취소
+                                </button>
+                                <button type="button" onclick="submitEditBranch()" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; height: 2.5rem; padding: 0.5rem 1rem; border: none; background: #1EC3B0; color: white; cursor: pointer;">
+                                    수정
+                                </button>
+                            </div>
+                        </form>
+                        <button type="button" onclick="closeEditBranchModal()" style="position: absolute; right: 1rem; top: 1rem; border-radius: 0.125rem; opacity: 0.7; background: none; border: none; cursor: pointer;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1rem; width: 1rem;">
                                 <path d="M18 6 6 18"></path>
                                 <path d="m6 6 12 12"></path>

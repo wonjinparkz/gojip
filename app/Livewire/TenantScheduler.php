@@ -30,15 +30,15 @@ class TenantScheduler extends Component
     {
         // 세션에서 선택된 지점 가져오기
         $this->branchId = session('current_branch_id', $branchId);
-        $this->currentYear = now()->year;
-        $this->currentMonth = now()->month;
+        
+        // 서울 시간 기준으로 오늘 날짜 설정
+        $today = Carbon::now('Asia/Seoul');
+        $this->currentYear = $today->year;
+        $this->currentMonth = $today->month;
 
-        // 초기 범위: 이전달 1일 ~ 다음달 말일 (3개월)
-        $previousMonth = Carbon::create($this->currentYear, $this->currentMonth, 1)->subMonth();
-        $nextMonth = Carbon::create($this->currentYear, $this->currentMonth, 1)->addMonth();
-
-        $this->startDate = $previousMonth->format('Y-m-d');
-        $this->endDate = $nextMonth->endOfMonth()->format('Y-m-d');
+        // 초기 범위: 오늘 기준 ±365일 (약 1년)
+        $this->startDate = $today->copy()->subDays(365)->format('Y-m-d');
+        $this->endDate = $today->copy()->addDays(365)->format('Y-m-d');
 
         $this->loadData();
     }
@@ -54,7 +54,8 @@ class TenantScheduler extends Component
     {
         $start = Carbon::parse($this->startDate);
         $end = Carbon::parse($this->endDate);
-        $today = now()->format('Y-m-d');
+        // 서울 시간 기준 오늘 날짜
+        $today = Carbon::now('Asia/Seoul')->format('Y-m-d');
 
         $this->days = [];
 
@@ -105,6 +106,11 @@ class TenantScheduler extends Component
 
         $query = Tenant::with(['branch', 'room'])
             ->whereNotNull('move_in_date')
+            ->where(function($q) {
+                // 퇴실일이 없거나 오늘 이후인 경우만 (현재 + 미래 입주자)
+                $q->whereNull('move_out_date')
+                  ->orWhereDate('move_out_date', '>=', now());
+            })
             ->whereHas('branch', function ($query) {
                 $query->where('user_id', auth()->id());
             });
@@ -120,23 +126,52 @@ class TenantScheduler extends Component
             \Log::info("입주자: {$t->name}, Room ID: {$t->room_id}, Move In: {$t->move_in_date}, Move Out: {$t->move_out_date}");
         }
 
+        // 서울 시간 기준 오늘 날짜
+        $today = Carbon::now('Asia/Seoul');
+
         $this->tenants = $allTenants
-            ->map(function ($tenant) {
+            ->map(function ($tenant) use ($today) {
+                // 퇴실일 미정인 경우 항상 오늘 날짜를 사용
+                $moveOutDate = $tenant->indefinite_move_out
+                    ? now()->format('Y-m-d')
+                    : $tenant->move_out_date?->format('Y-m-d');
+
+                // 입실 상태 판단
+                $moveInDate = Carbon::parse($tenant->move_in_date)->startOfDay();
+                $moveOutCarbon = $moveOutDate ? Carbon::parse($moveOutDate)->startOfDay() : null;
+                
+                // 입실 상태별 컬러 및 상태 결정
+                $status = 'reserved'; // 기본값: 입실 예정
+                $color = '#BFF5D1'; // 입실 예정 컬러
+                $overdueDays = 0;
+                
+                if ($moveOutCarbon && $moveOutCarbon->lt($today->copy()->startOfDay())) {
+                    // 퇴실일이 지났으면 퇴실 지연
+                    $status = 'overdue';
+                    $color = '#FCA5A5';
+                    // 퇴실일 다음날부터 카운트 (퇴실일 당일은 +0)
+                    $overdueDays = (int) $moveOutCarbon->copy()->addDay()->diffInDays($today->copy()->startOfDay());
+                } elseif ($moveInDate->lte($today->copy()->startOfDay())) {
+                    // 입실일이 지났으면 입실 중
+                    $status = 'occupied';
+                    $color = '#2ECC71';
+                }
+
                 return [
                     'id' => $tenant->id,
                     'name' => $tenant->name,
                     'room_id' => $tenant->room_id,
                     'room_number' => $tenant->room_number,
                     'move_in_date' => $tenant->move_in_date?->format('Y-m-d'),
-                    'move_out_date' => $tenant->move_out_date?->format('Y-m-d'),
+                    'move_out_date' => $moveOutDate,
+                    'indefinite_move_out' => $tenant->indefinite_move_out ?? false,
                     'payment_status' => $tenant->payment_status,
-                    'color' => match($tenant->payment_status) {
-                        'paid' => '#10b981',
-                        'overdue' => '#ef4444',
-                        'pending' => '#f59e0b',
-                        'waiting' => '#9ca3af',
-                        default => '#6b7280',
-                    },
+                    'is_short_term' => $tenant->is_short_term ?? false,
+                    'short_term_monthly_rent' => $tenant->short_term_monthly_rent,
+                    'short_term_deposit' => $tenant->short_term_deposit,
+                    'occupancy_status' => $status, // 입실 상태
+                    'overdue_days' => $overdueDays, // 퇴실 지연 일수
+                    'color' => $color, // 입실 상태별 컬러
                 ];
             })
             ->toArray();
@@ -161,19 +196,31 @@ class TenantScheduler extends Component
         $this->loadData();
     }
 
-    public function today()
+    public function returnToToday()
     {
-        $this->currentYear = now()->year;
-        $this->currentMonth = now()->month;
+        // 서울 시간 기준 오늘 날짜로 돌아가기
+        $today = Carbon::now('Asia/Seoul');
+        $this->currentYear = $today->year;
+        $this->currentMonth = $today->month;
+        
+        // 오늘 기준 ±365일 범위 재설정
+        $this->startDate = $today->copy()->subDays(365)->format('Y-m-d');
+        $this->endDate = $today->copy()->addDays(365)->format('Y-m-d');
+        
         $this->loadData();
+        
+        // 프론트엔드에서 스크롤할 수 있도록 오늘 날짜 반환
+        return $today->format('Y-m-d');
     }
 
-    public function openCreateModal($roomId, $startDate, $endDate)
+    public function openCreateModal($roomId, $startDate, $endDate, $tenantId = null)
     {
         $this->dispatch('open-tenant-modal',
             roomId: $roomId,
             startDate: $startDate,
-            endDate: $endDate
+            endDate: $endDate,
+            tenantId: $tenantId,
+            datesReadOnly: false
         );
     }
 

@@ -1,12 +1,28 @@
 <div>
     @if($show)
     <div style="position: fixed; inset: 0; z-index: 9999; overflow-y: auto;">
+        <style>
+            /* 모바일 반응형 */
+            @media (max-width: 640px) {
+                .tenant-mgmt-modal {
+                    padding: 20px !important;
+                    border-radius: 12px !important;
+                }
+                .tenant-form-grid-3 {
+                    grid-template-columns: 1fr !important;
+                }
+                .tenant-form-grid-2 {
+                    grid-template-columns: 1fr !important;
+                }
+            }
+        </style>
+
         <!-- Backdrop -->
         <div wire:click="close" style="position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5);"></div>
 
         <!-- Modal Content -->
         <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px;">
-            <div style="background-color: white; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 100%; max-width: 600px; padding: 32px; position: relative; z-index: 10000;">
+            <div class="tenant-mgmt-modal" style="background-color: white; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 100%; max-width: 600px; padding: 32px; position: relative; z-index: 10000;">
 
                 <!-- Modal Header -->
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
@@ -27,7 +43,7 @@
                         <div style="margin-bottom: 24px;">
                             <h4 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">기본 정보</h4>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                            <div class="tenant-form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
                                 <!-- 이름 -->
                                 <div>
                                     <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">이름 *</label>
@@ -61,11 +77,104 @@
                             </div>
                         </div>
 
+                        <!-- 입주 정보 -->
+                        <div style="margin-bottom: 24px;">
+                            <h4 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">입주 정보</h4>
+
+                            <div class="tenant-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <!-- 입주일 -->
+                                <div>
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">입주일</label>
+                                    <input type="date" wire:model="move_in_date" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                                    @error('move_in_date')
+                                        <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
+                                    @enderror
+                                </div>
+
+                                <!-- 퇴실일 -->
+                                <div x-data="indefiniteMoveOut('indefinite_move_out', 'move_out_date')">
+                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">
+                                        <span>퇴실일</span>
+                                        <label style="display: flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer;">
+                                            <input type="checkbox"
+                                                   wire:model.live="indefinite_move_out"
+                                                   x-model="indefinite"
+                                                   style="width: 16px; height: 16px; cursor: pointer; accent-color: #2dd4bf;">
+                                            <span style="font-size: 13px; color: #6b7280;">퇴실일 미정</span>
+                                        </label>
+                                    </label>
+                                    <input type="date"
+                                           wire:model.blur="move_out_date"
+                                           x-bind:disabled="indefinite"
+                                           x-bind:style="getDateInputStyle()"
+                                           onfocus="if(!this.disabled) { this.style.outline='2px solid #2dd4bf'; this.style.borderColor='transparent'; }"
+                                           onblur="if(!this.disabled) { this.style.outline='none'; this.style.borderColor='#d1d5db'; }">
+                                    @error('move_out_date')
+                                        <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 단기숙박 정보 -->
+                        <div style="margin-bottom: 24px;">
+                            <h4 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">단기숙박 정보</h4>
+
+                            <!-- 단기숙박 체크박스 -->
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" wire:model.live="is_short_term" style="width: 16px; height: 16px; cursor: pointer; accent-color: #2dd4bf;">
+                                    <span style="font-size: 14px; font-weight: 500; color: #374151;">단기 숙박</span>
+                                    <span style="font-size: 12px; color: #9ca3af; font-weight: 400;">월세 거주자가 아닌 경우 선택해주세요</span>
+                                </label>
+                            </div>
+
+                            @if($is_short_term)
+                            <div class="tenant-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <!-- 단기 숙박 월세 -->
+                                <div x-data="currencyInput('short_term_monthly_rent')">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">단기 숙박 월세 *</label>
+                                    <div style="position: relative;">
+                                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 14px;">₩</span>
+                                        <input type="text"
+                                               x-model="displayValue"
+                                               @input="handleInput($event)"
+                                               style="width: 100%; padding: 12px 16px 12px 28px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;"
+                                               placeholder="예: 700,000"
+                                               onfocus="this.style.outline='2px solid #2dd4bf'; this.style.borderColor='transparent';"
+                                               onblur="this.style.outline='none'; this.style.borderColor='#d1d5db';">
+                                    </div>
+                                    @error('short_term_monthly_rent')
+                                        <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
+                                    @enderror
+                                </div>
+
+                                <!-- 단기 숙박 보증금 -->
+                                <div x-data="currencyInput('short_term_deposit')">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">단기 숙박 보증금 (선택)</label>
+                                    <div style="position: relative;">
+                                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 14px;">₩</span>
+                                        <input type="text"
+                                               x-model="displayValue"
+                                               @input="handleInput($event)"
+                                               style="width: 100%; padding: 12px 16px 12px 28px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;"
+                                               placeholder="예: 500,000"
+                                               onfocus="this.style.outline='2px solid #2dd4bf'; this.style.borderColor='transparent';"
+                                               onblur="this.style.outline='none'; this.style.borderColor='#d1d5db';">
+                                    </div>
+                                    @error('short_term_deposit')
+                                        <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+
                         <!-- 결제 정보 -->
                         <div style="margin-bottom: 24px;">
                             <h4 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">결제 정보</h4>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                            <div class="tenant-form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
                                 <!-- 마지막 입금일 -->
                                 <div>
                                     <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">마지막 입금일</label>
@@ -126,8 +235,7 @@
                             <!-- 블랙리스트 메모 (블랙리스트 체크 시에만 표시) -->
                             @if($is_blacklisted)
                             <div>
-                                <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">블랙리스트 메모</label>
-                                <textarea wire:model="blacklist_memo" rows="3" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; resize: vertical;" placeholder="메모를 입력하세요"></textarea>
+                                <textarea wire:model="blacklist_memo" rows="3" style="width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; resize: vertical;" placeholder="블랙리스트로 등록할 입실자의 상세 사유를 입력하세요"></textarea>
                                 @error('blacklist_memo')
                                     <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
                                 @enderror
@@ -151,3 +259,84 @@
     </div>
     @endif
 </div>
+
+<script>
+document.addEventListener('livewire:init', () => {
+    if (typeof Alpine !== 'undefined' && !Alpine.__componentsRegistered) {
+        Alpine.__componentsRegistered = true;
+
+        // 퇴실일 미정 컴포넌트
+        Alpine.data('indefiniteMoveOut', (wireProperty = 'indefiniteMoveOut', moveOutDateProperty = 'moveOutDate') => ({
+            indefinite: false,
+            init() {
+                // Livewire 값으로 초기화
+                this.$nextTick(() => {
+                    if (this.$wire && wireProperty) {
+                        const initialValue = this.$wire.get(wireProperty);
+                        this.indefinite = initialValue || false;
+                    }
+                });
+
+                // indefinite 값 변경 감시
+                this.$watch('indefinite', value => {
+                    if (value) {
+                        this.updateMoveOutDate();
+                    }
+                });
+
+                // Livewire 값 변경 감시
+                if (this.$wire) {
+                    this.$wire.$watch(wireProperty, value => {
+                        this.indefinite = value || false;
+                    });
+                }
+            },
+            updateMoveOutDate() {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                const dateString = `${year}-${month}-${day}`;
+                if (this.$wire && moveOutDateProperty) {
+                    this.$wire.set(moveOutDateProperty, dateString);
+                }
+            },
+            getDateInputStyle() {
+                if (this.indefinite) {
+                    return 'width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background-color: #f3f4f6; cursor: not-allowed;';
+                }
+                return 'width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;';
+            }
+        }));
+
+        // 금액 포맷팅 컴포넌트
+        Alpine.data('currencyInput', (wireProperty) => ({
+            displayValue: '',
+            init() {
+                this.$nextTick(() => {
+                    if (this.$wire && wireProperty) {
+                        const initialValue = this.$wire.get(wireProperty);
+                        if (initialValue) {
+                            this.displayValue = this.formatNumber(initialValue);
+                        }
+                    }
+                });
+            },
+            formatNumber(value) {
+                if (!value && value !== 0) return '';
+                const num = String(value).replace(/[^\d]/g, '');
+                return num.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            },
+            handleInput(event) {
+                const input = event.target;
+                const rawValue = input.value.replace(/[^\d]/g, '');
+                this.displayValue = this.formatNumber(rawValue);
+                input.value = this.displayValue;
+                if (this.$wire && wireProperty) {
+                    this.$wire.set(wireProperty, rawValue ? parseInt(rawValue) : null);
+                }
+            }
+        }));
+    }
+});
+</script>

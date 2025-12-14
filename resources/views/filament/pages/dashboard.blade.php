@@ -7,142 +7,9 @@
     @endphp
 
     <!-- 헤더 섹션 -->
-    <div style="margin-bottom: 1.5rem;">
+    <div>
         <div style="display: flex; align-items: center; gap: 0.75rem;">
             <h1 style="font-size: 1.25rem; font-weight: 600; color: #1f2937;">{{ $branch ? $branch->name : '대시보드' }}</h1>
-
-            <!-- 캘린더 아이콘 버튼 -->
-            <div style="position: relative;">
-                <button
-                    wire:click="toggleCalendar"
-                    style="display: inline-flex; justify-content: center; align-items: center; gap: 0.5rem; white-space: nowrap; font-size: 0.875rem; font-weight: 500; transition: color 0.2s; outline: none; height: 2.25rem; padding: 0.25rem; margin: -0.25rem; background: transparent; border: none; border-radius: 0.5rem; cursor: pointer;"
-                    type="button"
-                    onmouseover="this.querySelector('svg').style.stroke='#40c0c0'"
-                    onmouseout="this.querySelector('svg').style.stroke='#000'"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1.25rem; width: 1.25rem; color: #000; transition: all 0.2s;">
-                        <path d="M8 2v4"></path>
-                        <path d="M16 2v4"></path>
-                        <rect width="18" height="18" x="3" y="4" rx="2"></rect>
-                        <path d="M3 10h18"></path>
-                    </svg>
-                </button>
-
-                <!-- 캘린더 팝오버 -->
-                @if($showCalendarPopover)
-                <div
-                    style="position: absolute; left: 0; top: 100%; margin-top: 0.5rem; z-index: 50; background: white; border: 1px solid #e5e7eb; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); padding: 1.5rem; min-width: 280px;"
-                    x-data
-                    @click.away="$wire.set('showCalendarPopover', false)"
-                >
-                    <!-- 캘린더 헤더 -->
-                    <div style="display: flex; justify-content: center; align-items: center; padding-top: 0.25rem; position: relative; margin-bottom: 0.5rem;">
-                        <button
-                            wire:click="previousMonth"
-                            style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; outline: none; height: 1.75rem; width: 1.75rem; background: transparent; padding: 0; opacity: 0.5; position: absolute; left: 0.25rem; border: 1px solid #d1d5db; cursor: pointer;"
-                            type="button"
-                            onmouseover="this.style.opacity='1'; this.style.backgroundColor='#f3f4f6';"
-                            onmouseout="this.style.opacity='0.5'; this.style.backgroundColor='transparent';"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1rem; width: 1rem;">
-                                <path d="m15 18-6-6 6-6"></path>
-                            </svg>
-                        </button>
-                        <div style="font-size: 0.875rem; font-weight: 500;">{{ $currentMonth }}월 {{ $currentYear }}</div>
-                        <button
-                            wire:click="nextMonth"
-                            style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; outline: none; height: 1.75rem; width: 1.75rem; background: transparent; padding: 0; opacity: 0.5; position: absolute; right: 0.25rem; border: 1px solid #d1d5db; cursor: pointer;"
-                            type="button"
-                            onmouseover="this.style.opacity='1'; this.style.backgroundColor='#f3f4f6';"
-                            onmouseout="this.style.opacity='0.5'; this.style.backgroundColor='transparent';"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1rem; width: 1rem;">
-                                <path d="m9 18 6-6-6-6"></path>
-                            </svg>
-                        </button>
-                    </div>
-
-                    <!-- 캘린더 그리드 -->
-                    <div style="display: grid; grid-template-columns: repeat(7, 2.25rem); gap: 0.125rem;">
-                        <!-- 요일 헤더 -->
-                        <div style="color: #6b7280; text-align: center; font-weight: 400; font-size: 0.8rem; padding: 0.25rem 0;">일</div>
-                        <div style="color: #6b7280; text-align: center; font-weight: 400; font-size: 0.8rem; padding: 0.25rem 0;">월</div>
-                        <div style="color: #6b7280; text-align: center; font-weight: 400; font-size: 0.8rem; padding: 0.25rem 0;">화</div>
-                        <div style="color: #6b7280; text-align: center; font-weight: 400; font-size: 0.8rem; padding: 0.25rem 0;">수</div>
-                        <div style="color: #6b7280; text-align: center; font-weight: 400; font-size: 0.8rem; padding: 0.25rem 0;">목</div>
-                        <div style="color: #6b7280; text-align: center; font-weight: 400; font-size: 0.8rem; padding: 0.25rem 0;">금</div>
-                        <div style="color: #6b7280; text-align: center; font-weight: 400; font-size: 0.8rem; padding: 0.25rem 0;">토</div>
-
-                        @php
-                            $firstDay = \Carbon\Carbon::create($currentYear, $currentMonth, 1);
-                            $lastDay = $firstDay->copy()->endOfMonth();
-                            $startOfWeek = $firstDay->copy()->startOfWeek();
-                            $endOfWeek = $lastDay->copy()->endOfWeek();
-                            $today = now()->format('Y-m-d');
-                            $calendarDate = $startOfWeek->copy();
-                        @endphp
-
-                        @while($calendarDate <= $endOfWeek)
-                            @php
-                                $dateStr = $calendarDate->format('Y-m-d');
-                                $isCurrentMonth = $calendarDate->month == $currentMonth;
-                                $isToday = $dateStr == $today;
-                                $isSelected = $dateStr == $currentDate;
-                            @endphp
-
-                            <div style="height: 2.25rem; width: 2.25rem; text-align: center; font-size: 0.875rem; padding: 0;">
-                                <button
-                                    wire:click="selectCalendarDate('{{ $dateStr }}')"
-                                    style="display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; border-radius: 0.375rem; font-size: 0.875rem; transition: all 0.2s; outline: none; height: 2.25rem; width: 2.25rem; padding: 0; font-weight: 400; border: none; cursor: pointer; {{ $isCurrentMonth ? 'color: #374151;' : 'color: #d1d5db;' }} {{ $isToday ? 'background-color: #f3f4f6; font-weight: 600;' : 'background-color: transparent;' }} {{ $isSelected && !$isToday ? 'background-color: #f3f4f6;' : '' }}"
-                                    type="button"
-                                    onmouseover="if (this.style.backgroundColor === 'transparent' || this.style.backgroundColor === '') this.style.backgroundColor='#f9fafb';"
-                                    onmouseout="this.style.backgroundColor='{{ $isToday || $isSelected ? '#f3f4f6' : 'transparent' }}';"
-                                >
-                                    {{ $calendarDate->day }}
-                                </button>
-                            </div>
-
-                            @php
-                                $calendarDate->addDay();
-                            @endphp
-                        @endwhile
-                    </div>
-                </div>
-                @endif
-            </div>
-
-            <!-- 이전 날짜 버튼 -->
-            <button
-                wire:click="previousDay"
-                style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; outline: none; height: 2.25rem; padding: 0.25rem; border: none; background: transparent; border-radius: 9999px; cursor: pointer;"
-                aria-label="이전 날짜로 이동"
-                data-testid="button-prev-day"
-                onmouseover="this.style.backgroundColor='#f3f4f6';"
-                onmouseout="this.style.backgroundColor='transparent';"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1rem; width: 1rem; color: #4b5563;">
-                    <path d="m15 18-6-6 6-6"></path>
-                </svg>
-            </button>
-
-            <!-- 현재 날짜 표시 -->
-            <span style="font-size: 0.875rem; color: #4b5563; font-weight: 500; margin: 0 0.25rem;" data-testid="text-current-date">
-                {{ $currentDateCarbon->isoFormat('YYYY. M. D. (ddd)') }}
-            </span>
-
-            <!-- 다음 날짜 버튼 -->
-            <button
-                wire:click="nextDay"
-                style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; outline: none; height: 2.25rem; padding: 0.25rem; border: none; background: transparent; border-radius: 9999px; cursor: pointer;"
-                aria-label="다음 날짜로 이동"
-                data-testid="button-next-day"
-                onmouseover="this.style.backgroundColor='#f3f4f6';"
-                onmouseout="this.style.backgroundColor='transparent';"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1rem; width: 1rem; color: #4b5563;">
-                    <path d="m9 18 6-6-6-6"></path>
-                </svg>
-            </button>
         </div>
     </div>
 
@@ -189,8 +56,228 @@
                     </div>
                 </div>
             </div>
+            <!-- 자세히 보기 버튼 -->
+            <div style="padding: 0.75rem 0 0 0;">
+                <button
+                    wire:click="toggleRoomDetailsModal"
+                    style="width: 100%; padding: 0.5rem; font-size: 0.75rem; color: #6b7280; background-color: #E8E8E8; border: 1px solid #E8E8E8; border-radius: 0.75rem; cursor: pointer; transition: background-color 0.2s;"
+                    onmouseover="this.style.backgroundColor='#d1d5db'"
+                    onmouseout="this.style.backgroundColor='#E8E8E8'"
+                    data-testid="button-view-room-details">
+                    호실 현황 자세히 보기
+                </button>
+            </div>
         </div>
     </div>
+
+    <!-- Dashboard Memo Widget -->
+    <livewire:dashboard-memo-widget :current-date="$currentDate" :key="'memo-'.$currentDate" />
+
+    <!-- 주간/월간 일정 캘린더 -->
+    @if($memoType === 'weekly' || $memoType === 'monthly')
+    <div style="background-color: #f8f8f8; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); margin-bottom: 1rem;">
+        <div style="padding: 0.75rem; background-color: #f8f8f8; border-radius: 1rem 1rem 0 0;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <h2 style="font-size: 0.875rem; font-weight: 500; color: #374151;">📅 {{ $memoType === 'weekly' ? '주간' : '월간' }} 일정 캘린더</h2>
+            </div>
+        </div>
+        <div style="padding: 0 0.75rem 0.75rem 0.75rem;">
+            <div style="background-color: white; border-radius: 0.75rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);">
+                <!-- 캘린더 헤더 -->
+                <div style="position: relative; display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background-color: white; border-radius: 0.75rem 0.75rem 0 0;">
+                    <div style="display: flex; align-items: center;">
+                        <select wire:model.live="scheduleFilter" style="font-size: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; padding: 0.25rem 0.5rem; background-color: white; outline: none;">
+                            <option value="all">모든 일정</option>
+                            <option value="checkin-checkout">입퇴실</option>
+                            <option value="other">기타</option>
+                        </select>
+                    </div>
+                    <div style="position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.5rem;">
+                        <button wire:click="previousMonth" style="padding: 0.25rem; color: #6b7280; background: none; border: none; border-radius: 9999px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#40c0c0'; this.style.backgroundColor='rgba(255,255,255,0.5)';" onmouseout="this.style.color='#6b7280'; this.style.backgroundColor='transparent';">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1rem; width: 1rem;">
+                                <path d="m15 18-6-6 6-6"></path>
+                            </svg>
+                        </button>
+                        <h3 style="font-size: 0.875rem; font-weight: 500; color: #374151; white-space: nowrap;">{{ $currentYear }}년 {{ $currentMonth }}월</h3>
+                        <button wire:click="nextMonth" style="padding: 0.25rem; color: #6b7280; background: none; border: none; border-radius: 9999px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#40c0c0'; this.style.backgroundColor='rgba(255,255,255,0.5)';" onmouseout="this.style.color='#6b7280'; this.style.backgroundColor='transparent';">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1rem; width: 1rem;">
+                                <path d="m9 18 6-6-6-6"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <button wire:click="goToToday" title="오늘 날짜로 이동" style="padding: 0.125rem; color: #6b7280; background: none; border: none; border-radius: 9999px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#40c0c0'; this.style.backgroundColor='rgba(255,255,255,0.5)';" onmouseout="this.style.color='#6b7280'; this.style.backgroundColor='transparent';">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 0.875rem; width: 0.875rem;">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                                <path d="M3 3v5h5"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid #e5e7eb;"></div>
+
+                <!-- 캘린더 그리드 -->
+                <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.25rem; padding: 0.75rem;">
+                    <!-- 요일 헤더 -->
+                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">일</div>
+                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">월</div>
+                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">화</div>
+                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">수</div>
+                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">목</div>
+                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">금</div>
+                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">토</div>
+
+                    @php
+                        $today = now()->format('Y-m-d');
+
+                        if ($memoType === 'weekly') {
+                            // 주간: 현재 날짜가 속한 주의 일요일부터 토요일까지만 표시
+                            $currentDateCarbon = \Carbon\Carbon::parse($this->currentDate);
+                            $startOfWeek = $currentDateCarbon->copy()->startOfWeek();
+                            $endOfWeek = $currentDateCarbon->copy()->endOfWeek();
+                            $currentDate = $startOfWeek->copy();
+                            $loopEndDate = $endOfWeek;
+                        } else {
+                            // 월간: 전체 월 표시
+                            $firstDay = \Carbon\Carbon::create($currentYear, $currentMonth, 1);
+                            $lastDay = $firstDay->copy()->endOfMonth();
+                            $startOfWeek = $firstDay->copy()->startOfWeek();
+                            $endOfWeek = $lastDay->copy()->endOfWeek();
+                            $currentDate = $startOfWeek->copy();
+                            $loopEndDate = $endOfWeek;
+                        }
+                    @endphp
+
+                    @while($currentDate <= $loopEndDate)
+                        @php
+                            $dateStr = $currentDate->format('Y-m-d');
+                            // 주간 모드에서는 모든 날짜를 현재 기간으로 간주
+                            $isCurrentMonth = $memoType === 'weekly' ? true : ($currentDate->month == $currentMonth);
+                            $isToday = $dateStr == $today;
+                            $isSelected = $dateStr == $selectedDate;
+
+                            // 해당 날짜의 일정 개수
+                            $hasCheckIn = isset($monthCheckIns[$dateStr]);
+                            $hasCheckOut = isset($monthCheckOuts[$dateStr]);
+                            $hasCustom = isset($monthCustomSchedules[$dateStr]);
+
+                            // 커스텀 일정의 카테고리 확인
+                            $customDotColor = '#eab308'; // 기본값: 노란색 (기타)
+                            if ($hasCustom && isset($monthCustomSchedules[$dateStr])) {
+                                $hasNonOtherCategory = $monthCustomSchedules[$dateStr]->contains(function($schedule) {
+                                    return $schedule->category !== '기타';
+                                });
+                                if ($hasNonOtherCategory) {
+                                    $customDotColor = '#a855f7'; // 보라색
+                                }
+                            }
+
+                            // 필터 적용
+                            if ($scheduleFilter === 'checkin-checkout') {
+                                $hasCustom = false;
+                            } elseif ($scheduleFilter === 'other') {
+                                $hasCheckIn = false;
+                                $hasCheckOut = false;
+                            }
+
+                            $hasSchedule = $hasCheckIn || $hasCheckOut || $hasCustom;
+                        @endphp
+
+                        <div
+                            wire:click="selectDate('{{ $dateStr }}')"
+                            style="min-height: 2rem; padding: 0.25rem; text-align: center; font-size: 0.75rem; cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; {{ $isCurrentMonth ? 'color: #374151;' : 'color: #d1d5db;' }} {{ $isToday ? 'background-color: rgba(64, 192, 192, 0.1); font-weight: 600;' : '' }} {{ $isSelected && !$isToday ? 'background-color: #f3f4f6;' : '' }}"
+                            onmouseover="this.style.backgroundColor='{{ $isCurrentMonth ? '#f3f4f6' : '#f9fafb' }}';"
+                            onmouseout="this.style.backgroundColor='{{ $isToday ? 'rgba(64, 192, 192, 0.1)' : ($isSelected ? '#f3f4f6' : 'transparent') }}';"
+                        >
+                            <div style="position: relative;">
+                                {{ $currentDate->day }}
+                                @if($hasSchedule)
+                                    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem; margin-top: 0.25rem;">
+                                        @if($hasCheckIn)
+                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: #3b82f6;" title="입실 일정"></div>
+                                        @endif
+                                        @if($hasCheckOut)
+                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: #ef4444;" title="퇴실 일정"></div>
+                                        @endif
+                                        @if($hasCustom)
+                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: {{ $customDotColor }};" title="{{ $customDotColor === '#a855f7' ? '관리 일정' : '기타 일정' }}"></div>
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+
+                        @php
+                            $currentDate->addDay();
+                        @endphp
+                    @endwhile
+                </div>
+
+                <!-- 선택된 날짜의 일정 목록 -->
+                <div style="border-top: 1px solid #e5e7eb; padding: 0.75rem 0.75rem 1rem 0.75rem; background-color: white; border-radius: 0 0 0.75rem 0.75rem;">
+                    @php
+                        $checkInCount = $scheduleFilter !== 'other' ? count($selectedDateSchedules['checkIns'] ?? []) : 0;
+                        $checkOutCount = $scheduleFilter !== 'other' ? count($selectedDateSchedules['checkOuts'] ?? []) : 0;
+                        $customCount = $scheduleFilter !== 'checkin-checkout' ? count($selectedDateSchedules['customSchedules'] ?? []) : 0;
+                        $totalCount = $checkInCount + $checkOutCount + $customCount;
+                    @endphp
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <h4 style="font-size: 0.75rem; font-weight: 700; color: #374151; margin: 0;">📅 {{ \Carbon\Carbon::parse($selectedDate)->isoFormat('YYYY년 M월 D일 dddd') }} 일정 (총 {{ $totalCount }}건)</h4>
+                        <button onclick="openScheduleModal()" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; height: 1.5rem; padding: 0 0.5rem; font-size: 0.75rem; background-color: rgba(64, 192, 192, 0.1); color: #374151; font-weight: 700; border: none; border-radius: 9999px; margin-top: 0.25rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(64, 192, 192, 0.2)';" onmouseout="this.style.backgroundColor='rgba(64, 192, 192, 0.1)';">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 0.75rem; height: 0.75rem; margin-right: -0.125rem;">
+                                <path d="M5 12h14"></path>
+                                <path d="M12 5v14"></path>
+                            </svg>
+                            일정 추가
+                        </button>
+                    </div>
+                    <div style="padding: 0.5rem; border-radius: 0.5rem; background-color: white;">
+                        @if($totalCount > 0)
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                @if($scheduleFilter !== 'other')
+                                    @foreach($selectedDateSchedules['checkIns'] ?? [] as $room)
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: #3b82f6;"></div>
+                                            <div style="font-size: 0.75rem; font-weight: 500;">입실: {{ $room->room_number }}호 ({{ $room->tenant_name ?? '입주자 정보 없음' }})</div>
+                                        </div>
+                                    @endforeach
+                                    @foreach($selectedDateSchedules['checkOuts'] ?? [] as $room)
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: #ef4444;"></div>
+                                            <div style="font-size: 0.75rem; font-weight: 500;">퇴실: {{ $room->room_number }}호 ({{ $room->tenant_name ?? '입주자 정보 없음' }})</div>
+                                        </div>
+                                    @endforeach
+                                @endif
+                                @if($scheduleFilter !== 'checkin-checkout')
+                                    @foreach($selectedDateSchedules['customSchedules'] ?? [] as $schedule)
+                                        @php
+                                            $isOtherCategory = $schedule->category === '기타';
+                                            $dotColor = $isOtherCategory ? '#eab308' : '#a855f7';
+                                        @endphp
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: {{ $dotColor }};"></div>
+                                            <div style="flex: 1;">
+                                                <div style="font-size: 0.75rem; font-weight: 500;">{{ $schedule->content }}</div>
+                                                @if($schedule->category !== '기타')
+                                                    <div style="font-size: 0.625rem; color: #6b7280; margin-top: 0.125rem;">{{ $schedule->category }}</div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @endif
+                            </div>
+                        @else
+                            <div style="text-align: center; color: #9ca3af; font-size: 0.75rem; padding: 0.5rem 0;">
+                                일정이 없습니다.
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <!-- 오늘의 일정 카드 -->
     <div style="background-color: #f8f8f8; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); margin-bottom: 1rem;">
@@ -490,198 +577,6 @@
         </div>
     </div>
 
-    <!-- 월간 일정 캘린더 -->
-    <div style="background-color: #f8f8f8; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); margin-bottom: 1rem;">
-        <div style="padding: 0.75rem; background-color: #f8f8f8; border-radius: 1rem 1rem 0 0;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <h2 style="font-size: 0.875rem; font-weight: 500; color: #374151;">📅 월간 일정 캘린더</h2>
-            </div>
-        </div>
-        <div style="padding: 0 0.75rem 0.75rem 0.75rem;">
-            <div style="background-color: white; border-radius: 0.75rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);">
-                <!-- 캘린더 헤더 -->
-                <div style="position: relative; display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background-color: white; border-radius: 0.75rem 0.75rem 0 0;">
-                    <div style="display: flex; align-items: center;">
-                        <select wire:model.live="scheduleFilter" style="font-size: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; padding: 0.25rem 0.5rem; background-color: white; outline: none;">
-                            <option value="all">모든 일정</option>
-                            <option value="checkin-checkout">입퇴실</option>
-                            <option value="other">기타</option>
-                        </select>
-                    </div>
-                    <div style="position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.5rem;">
-                        <button wire:click="previousMonth" style="padding: 0.25rem; color: #6b7280; background: none; border: none; border-radius: 9999px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#40c0c0'; this.style.backgroundColor='rgba(255,255,255,0.5)';" onmouseout="this.style.color='#6b7280'; this.style.backgroundColor='transparent';">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1rem; width: 1rem;">
-                                <path d="m15 18-6-6 6-6"></path>
-                            </svg>
-                        </button>
-                        <h3 style="font-size: 0.875rem; font-weight: 500; color: #374151; white-space: nowrap;">{{ $currentYear }}년 {{ $currentMonth }}월</h3>
-                        <button wire:click="nextMonth" style="padding: 0.25rem; color: #6b7280; background: none; border: none; border-radius: 9999px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#40c0c0'; this.style.backgroundColor='rgba(255,255,255,0.5)';" onmouseout="this.style.color='#6b7280'; this.style.backgroundColor='transparent';">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1rem; width: 1rem;">
-                                <path d="m9 18 6-6-6-6"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div style="display: flex; align-items: center;">
-                        <button wire:click="goToToday" title="오늘 날짜로 이동" style="padding: 0.125rem; color: #6b7280; background: none; border: none; border-radius: 9999px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#40c0c0'; this.style.backgroundColor='rgba(255,255,255,0.5)';" onmouseout="this.style.color='#6b7280'; this.style.backgroundColor='transparent';">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 0.875rem; width: 0.875rem;">
-                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                                <path d="M3 3v5h5"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div style="border-top: 1px solid #e5e7eb;"></div>
-
-                <!-- 캘린더 그리드 -->
-                <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.25rem; padding: 0.75rem;">
-                    <!-- 요일 헤더 -->
-                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">일</div>
-                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">월</div>
-                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">화</div>
-                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">수</div>
-                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">목</div>
-                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">금</div>
-                    <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">토</div>
-
-                    @php
-                        $firstDay = \Carbon\Carbon::create($currentYear, $currentMonth, 1);
-                        $lastDay = $firstDay->copy()->endOfMonth();
-                        $startOfWeek = $firstDay->copy()->startOfWeek();
-                        $endOfWeek = $lastDay->copy()->endOfWeek();
-                        $today = now()->format('Y-m-d');
-
-                        $currentDate = $startOfWeek->copy();
-                    @endphp
-
-                    @while($currentDate <= $endOfWeek)
-                        @php
-                            $dateStr = $currentDate->format('Y-m-d');
-                            $isCurrentMonth = $currentDate->month == $currentMonth;
-                            $isToday = $dateStr == $today;
-                            $isSelected = $dateStr == $selectedDate;
-
-                            // 해당 날짜의 일정 개수
-                            $hasCheckIn = isset($monthCheckIns[$dateStr]);
-                            $hasCheckOut = isset($monthCheckOuts[$dateStr]);
-                            $hasCustom = isset($monthCustomSchedules[$dateStr]);
-
-                            // 커스텀 일정의 카테고리 확인
-                            $customDotColor = '#eab308'; // 기본값: 노란색 (기타)
-                            if ($hasCustom && isset($monthCustomSchedules[$dateStr])) {
-                                $hasNonOtherCategory = $monthCustomSchedules[$dateStr]->contains(function($schedule) {
-                                    return $schedule->category !== '기타';
-                                });
-                                if ($hasNonOtherCategory) {
-                                    $customDotColor = '#a855f7'; // 보라색
-                                }
-                            }
-
-                            // 필터 적용
-                            if ($scheduleFilter === 'checkin-checkout') {
-                                $hasCustom = false;
-                            } elseif ($scheduleFilter === 'other') {
-                                $hasCheckIn = false;
-                                $hasCheckOut = false;
-                            }
-
-                            $hasSchedule = $hasCheckIn || $hasCheckOut || $hasCustom;
-                        @endphp
-
-                        <div
-                            wire:click="selectDate('{{ $dateStr }}')"
-                            style="min-height: 2rem; padding: 0.25rem; text-align: center; font-size: 0.75rem; cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; {{ $isCurrentMonth ? 'color: #374151;' : 'color: #d1d5db;' }} {{ $isToday ? 'background-color: rgba(64, 192, 192, 0.1); font-weight: 600;' : '' }} {{ $isSelected && !$isToday ? 'background-color: #f3f4f6;' : '' }}"
-                            onmouseover="this.style.backgroundColor='{{ $isCurrentMonth ? '#f3f4f6' : '#f9fafb' }}';"
-                            onmouseout="this.style.backgroundColor='{{ $isToday ? 'rgba(64, 192, 192, 0.1)' : ($isSelected ? '#f3f4f6' : 'transparent') }}';"
-                        >
-                            <div style="position: relative;">
-                                {{ $currentDate->day }}
-                                @if($hasSchedule)
-                                    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem; margin-top: 0.25rem;">
-                                        @if($hasCheckIn)
-                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: #3b82f6;" title="입실 일정"></div>
-                                        @endif
-                                        @if($hasCheckOut)
-                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: #ef4444;" title="퇴실 일정"></div>
-                                        @endif
-                                        @if($hasCustom)
-                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: {{ $customDotColor }};" title="{{ $customDotColor === '#a855f7' ? '관리 일정' : '기타 일정' }}"></div>
-                                        @endif
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-
-                        @php
-                            $currentDate->addDay();
-                        @endphp
-                    @endwhile
-                </div>
-
-                <!-- 선택된 날짜의 일정 목록 -->
-                <div style="border-top: 1px solid #e5e7eb; padding: 0.75rem 0.75rem 1rem 0.75rem; background-color: white; border-radius: 0 0 0.75rem 0.75rem;">
-                    @php
-                        $checkInCount = $scheduleFilter !== 'other' ? count($selectedDateSchedules['checkIns'] ?? []) : 0;
-                        $checkOutCount = $scheduleFilter !== 'other' ? count($selectedDateSchedules['checkOuts'] ?? []) : 0;
-                        $customCount = $scheduleFilter !== 'checkin-checkout' ? count($selectedDateSchedules['customSchedules'] ?? []) : 0;
-                        $totalCount = $checkInCount + $checkOutCount + $customCount;
-                    @endphp
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <h4 style="font-size: 0.75rem; font-weight: 700; color: #374151; margin: 0;">📅 {{ \Carbon\Carbon::parse($selectedDate)->isoFormat('YYYY년 M월 D일 dddd') }} 일정 (총 {{ $totalCount }}건)</h4>
-                        <button onclick="openScheduleModal()" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; height: 1.5rem; padding: 0 0.5rem; font-size: 0.75rem; background-color: rgba(64, 192, 192, 0.1); color: #374151; font-weight: 700; border: none; border-radius: 9999px; margin-top: 0.25rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(64, 192, 192, 0.2)';" onmouseout="this.style.backgroundColor='rgba(64, 192, 192, 0.1)';">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 0.75rem; height: 0.75rem; margin-right: -0.125rem;">
-                                <path d="M5 12h14"></path>
-                                <path d="M12 5v14"></path>
-                            </svg>
-                            일정 추가
-                        </button>
-                    </div>
-                    <div style="padding: 0.5rem; border-radius: 0.5rem; background-color: white;">
-                        @if($totalCount > 0)
-                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                @if($scheduleFilter !== 'other')
-                                    @foreach($selectedDateSchedules['checkIns'] ?? [] as $room)
-                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: #3b82f6;"></div>
-                                            <div style="font-size: 0.75rem; font-weight: 500;">입실: {{ $room->room_number }}호 ({{ $room->tenant_name ?? '입주자 정보 없음' }})</div>
-                                        </div>
-                                    @endforeach
-                                    @foreach($selectedDateSchedules['checkOuts'] ?? [] as $room)
-                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: #ef4444;"></div>
-                                            <div style="font-size: 0.75rem; font-weight: 500;">퇴실: {{ $room->room_number }}호 ({{ $room->tenant_name ?? '입주자 정보 없음' }})</div>
-                                        </div>
-                                    @endforeach
-                                @endif
-                                @if($scheduleFilter !== 'checkin-checkout')
-                                    @foreach($selectedDateSchedules['customSchedules'] ?? [] as $schedule)
-                                        @php
-                                            $isOtherCategory = $schedule->category === '기타';
-                                            $dotColor = $isOtherCategory ? '#eab308' : '#a855f7';
-                                        @endphp
-                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                            <div style="width: 0.375rem; height: 0.375rem; border-radius: 9999px; background-color: {{ $dotColor }};"></div>
-                                            <div style="flex: 1;">
-                                                <div style="font-size: 0.75rem; font-weight: 500;">{{ $schedule->content }}</div>
-                                                @if($schedule->category !== '기타')
-                                                    <div style="font-size: 0.625rem; color: #6b7280; margin-top: 0.125rem;">{{ $schedule->category }}</div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                @endif
-                            </div>
-                        @else
-                            <div style="text-align: center; color: #9ca3af; font-size: 0.75rem; padding: 0.5rem 0;">
-                                일정이 없습니다.
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- 빈 호실 상세 모달 -->
     <div id="availableRoomsModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; background-color: rgba(0, 0, 0, 0.5); align-items: center; justify-content: center;">
         <div style="position: relative; background: white; border-radius: 1rem; max-width: 56rem; width: 90%; max-height: 80vh; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
@@ -902,5 +797,120 @@
             }
         });
     </script>
+
+    <!-- 호실 현황 자세히 보기 모달 (바텀 시트) -->
+    @if($showRoomDetailsModal)
+    <div
+        role="dialog"
+        id="roomDetailsModal"
+        data-state="open"
+        style="position: fixed; inset: 0; z-index: 50; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: flex-end; justify-content: center;"
+        x-data
+        @click.self="$wire.set('showRoomDetailsModal', false)">
+        <div
+            style="background: white; border-radius: 10px 10px 0 0; width: 100%; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);">
+
+            <!-- 필터 탭 -->
+            <div style="display: flex; gap: 0.5rem; padding: 1rem 1rem 0.75rem 1rem; border-bottom: 1px solid #e5e7eb;">
+                <button
+                    wire:click="setRoomStatusFilter('all')"
+                    style="flex: 1; padding: 0.5rem 1rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; border: none; cursor: pointer; {{ $roomStatusFilter === 'all' ? 'background-color: #000000; color: #ffffff;' : 'background-color: #f3f4f6; color: #6b7280;' }}"
+                    onmouseover="if(this.style.backgroundColor === 'rgb(243, 244, 246)') this.style.backgroundColor='#e5e7eb';"
+                    onmouseout="if(this.style.color === 'rgb(107, 114, 128)') this.style.backgroundColor='#f3f4f6';">
+                    전체 <span style="font-weight: 700;">({{ $totalRooms }})</span>
+                </button>
+                <button
+                    wire:click="setRoomStatusFilter('occupied')"
+                    style="flex: 1; padding: 0.5rem 1rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; border: none; cursor: pointer; {{ $roomStatusFilter === 'occupied' ? 'background-color: #000000; color: #ffffff;' : 'background-color: #f3f4f6; color: #6b7280;' }}"
+                    onmouseover="if(this.style.backgroundColor === 'rgb(243, 244, 246)') this.style.backgroundColor='#e5e7eb';"
+                    onmouseout="if(this.style.color === 'rgb(107, 114, 128)') this.style.backgroundColor='#f3f4f6';">
+                    사용중 <span style="font-weight: 700;">({{ $occupiedRooms }})</span>
+                </button>
+                <button
+                    wire:click="setRoomStatusFilter('available')"
+                    style="flex: 1; padding: 0.5rem 1rem; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; border: none; cursor: pointer; {{ $roomStatusFilter === 'available' ? 'background-color: #000000; color: #ffffff;' : 'background-color: #f3f4f6; color: #6b7280;' }}"
+                    onmouseover="if(this.style.backgroundColor === 'rgb(243, 244, 246)') this.style.backgroundColor='#e5e7eb';"
+                    onmouseout="if(this.style.color === 'rgb(107, 114, 128)') this.style.backgroundColor='#f3f4f6';">
+                    공실 <span style="font-weight: 700;">({{ $availableRooms }})</span>
+                </button>
+            </div>
+
+            <!-- 스크롤 가능한 컨텐츠 영역 -->
+            <div style="flex: 1; overflow-y: auto; padding: 1rem;">
+                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    @foreach($roomsByFloor as $floor => $rooms)
+                        @php
+                            // 필터에 맞는 호실만 필터링 (호실 관리 페이지와 동일한 로직)
+                            $filteredRooms = $rooms->filter(function($room) use ($roomStatusFilter) {
+                                $isOccupied = !empty($room->tenant_name);
+
+                                if ($roomStatusFilter === 'occupied') {
+                                    return $isOccupied;
+                                }
+                                if ($roomStatusFilter === 'available') {
+                                    return !$isOccupied;
+                                }
+                                return true; // 'all'
+                            });
+
+                            // 필터된 호실이 없으면 이 층을 건너뜀
+                            if ($filteredRooms->isEmpty()) continue;
+                        @endphp
+
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <h3 style="font-size: 0.875rem; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 1rem;">📍</span>{{ $floor }}층
+                            </h3>
+                            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem;">
+                                @foreach($filteredRooms as $room)
+                                    @php
+                                        // 호실 관리 페이지와 동일한 로직: tenant_name 기반으로 사용중 판단
+                                        $isOccupied = !empty($room->tenant_name);
+                                        $bgColor = $isOccupied ? 'white' : '#d1d5db';
+                                        $statusBadgeColor = $isOccupied ? '#50d0d0' : 'white';
+                                        $statusBadgeTextColor = $isOccupied ? 'white' : '#6b7280';
+                                        $statusText = $isOccupied ? '사용중' : '공실';
+
+                                        // 퇴실까지 남은 일수 계산
+                                        $daysUntilCheckout = null;
+                                        if ($isOccupied && $room->move_out_date) {
+                                            $daysUntilCheckout = now()->diffInDays($room->move_out_date, false);
+                                        }
+                                    @endphp
+                                    <div style="border-radius: 0.75rem; padding: 0.75rem; border: 1px solid #e5e7eb; cursor: pointer; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); transition: box-shadow 0.2s; background-color: {{ $bgColor }};"
+                                        onmouseover="this.style.boxShadow='0 4px 6px -1px rgba(0, 0, 0, 0.1)';"
+                                        onmouseout="this.style.boxShadow='0 1px 3px 0 rgba(0, 0, 0, 0.1)';">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                            <span style="font-size: 1rem; font-weight: 700; color: #1f2937;">{{ $room->room_number }}호</span>
+                                            <span style="font-size: 0.75rem; font-weight: 500; padding: 0.125rem 0.5rem; border-radius: 9999px; background-color: {{ $statusBadgeColor }}; color: {{ $statusBadgeTextColor }};">{{ $statusText }}</span>
+                                        </div>
+                                        <div style="margin-bottom: 0.5rem;">
+                                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">월세</p>
+                                            <p style="font-size: 0.875rem; font-weight: 600; color: #1f2937; margin: 0;">{{ number_format($room->monthly_rent ?? 0) }}원</p>
+                                        </div>
+                                        @if($isOccupied && $daysUntilCheckout !== null)
+                                            <div style="padding-top: 0.5rem; border-top: 1px solid #e5e7eb;">
+                                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                                    <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">퇴실까지</p>
+                                                    <p style="font-size: 0.75rem; font-weight: 700; color: {{ $daysUntilCheckout < 0 ? '#ef4444' : '#6b7280' }}; margin: 0;">
+                                                        {{ $daysUntilCheckout >= 0 ? 'D-'.$daysUntilCheckout : 'D+'.(abs($daysUntilCheckout)) }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        @elseif(!$isOccupied)
+                                            <div style="padding-top: 0.5rem; border-top: 1px solid #e5e7eb;">
+                                                <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">입주 가능</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
     </div>
 </x-filament-panels::page>

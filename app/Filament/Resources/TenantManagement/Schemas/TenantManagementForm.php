@@ -39,6 +39,40 @@ class TenantManagementForm
                             ]),
                     ])->columns(3),
 
+                Section::make('입주 정보')
+                    ->schema([
+                        Forms\Components\DatePicker::make('move_in_date')
+                            ->label('입주일')
+                            ->displayFormat('Y년 m월 d일')
+                            ->native(false),
+                        Forms\Components\DatePicker::make('move_out_date')
+                            ->label('퇴실일')
+                            ->displayFormat('Y년 m월 d일')
+                            ->native(false),
+                        Forms\Components\Toggle::make('indefinite_move_out')
+                            ->label('퇴실일 미정')
+                            ->default(false),
+                    ])->columns(3),
+
+                Section::make('단기숙박 정보')
+                    ->schema([
+                        Forms\Components\Toggle::make('is_short_term')
+                            ->label('단기숙박')
+                            ->default(false)
+                            ->reactive()
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('short_term_monthly_rent')
+                            ->label('단기 숙박 월세')
+                            ->numeric()
+                            ->suffix('원')
+                            ->visible(fn (callable $get) => $get('is_short_term') === true),
+                        Forms\Components\TextInput::make('short_term_deposit')
+                            ->label('단기 숙박 보증금 (선택)')
+                            ->numeric()
+                            ->suffix('원')
+                            ->visible(fn (callable $get) => $get('is_short_term') === true),
+                    ])->columns(2),
+
                 Section::make('결제 정보')
                     ->schema([
                         Forms\Components\DatePicker::make('last_payment_date')

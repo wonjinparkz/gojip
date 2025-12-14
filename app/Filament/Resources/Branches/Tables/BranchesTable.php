@@ -4,7 +4,7 @@ namespace App\Filament\Resources\Branches\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -45,8 +45,16 @@ class BranchesTable
             ->filters([
                 //
             ])
+            ->recordAction(null) // 행 클릭 시 기본 동작 비활성화
+            ->recordUrl(null) // 행 클릭 URL 비활성화
             ->recordActions([
-                EditAction::make(),
+                Action::make('edit')
+                    ->label('수정')
+                    ->icon('heroicon-o-pencil')
+                    ->action(fn () => null)
+                    ->extraAttributes(fn ($record) => [
+                        'onclick' => "openEditBranchModal({$record->id}); return false;",
+                    ]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

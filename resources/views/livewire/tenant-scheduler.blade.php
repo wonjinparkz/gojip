@@ -1,4 +1,5 @@
-<div x-data="{
+<div style="width: 100%; height: 100%; max-width: 100%; overflow: hidden; display: flex; flex-direction: column;"
+     x-data="{
     isDragging: false,
     dragStartRoomId: null,
     dragStartDate: null,
@@ -159,19 +160,112 @@
         </div>
     </div>
 
+    <!-- Legend (Moved to top) -->
+    <div style="margin-bottom: 16px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 16px; height: 16px; background-color: #2ECC71; border-radius: 3px;"></div>
+                <span style="font-size: 13px; color: #6b7280;">입실 중</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 16px; height: 16px; background-color: #BFF5D1; border-radius: 3px;"></div>
+                <span style="font-size: 13px; color: #6b7280;">입실 예정</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <div style="width: 16px; height: 16px; background-color: #FCA5A5; border-radius: 3px;"></div>
+                <span style="font-size: 13px; color: #6b7280;">퇴실 지연</span>
+            </div>
+        </div>
+        
+        <!-- Return to Today Button -->
+        <button wire:click="returnToToday" 
+                @click="$nextTick(() => { 
+                    const todayCell = document.querySelector('[data-is-today=true]'); 
+                    if (todayCell) { 
+                        const container = document.getElementById('scheduler-container');
+                        const containerWidth = container.clientWidth; 
+                        const cellLeft = todayCell.offsetLeft; 
+                        const cellWidth = todayCell.offsetWidth; 
+                        container.scrollLeft = cellLeft - (containerWidth / 2) + (cellWidth / 2); 
+                    } 
+                })"
+                style="padding: 8px 16px; background-color: transparent; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 6px;"
+                onmouseover="this.style.backgroundColor='#f3f4f6'; this.style.borderColor='#9ca3af';"
+                onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor='#d1d5db';">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            오늘 날짜로 돌아가기
+        </button>
+    </div>
+
     <!-- Scheduler Container -->
-    <div style="background-color: white; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); padding: 32px;">
-        <!-- Title Section -->
-        <div style="margin-bottom: 24px;">
-            <h2 style="font-size: 20px; font-weight: 700; color: #111827; margin: 0 0 8px 0;">입주자 일정 관리</h2>
-            <p style="font-size: 14px; color: #4b5563; margin: 0;">호실별 입주자 일정을 확인하고 관리할 수 있습니다.</p>
+    <div style="width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;">
+
+        <!-- Month/Year Display Block (Above Table) -->
+        <div id="current-month-display" 
+             style="background-color: white; 
+                    border: 1px solid #f3f4f6;
+                    border-bottom: 0;
+                    border-radius: 12px 12px 0 0;
+                    padding: 12px 24px; 
+                    text-align: center;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+            <span id="month-display-text" style="font-size: 16px; font-weight: 600; color: #1f2937;">
+                @php
+                    $today = \Carbon\Carbon::now('Asia/Seoul');
+                @endphp
+                {{ $today->year }}년 {{ $today->month }}월
+            </span>
         </div>
 
         <!-- Scheduler Table -->
         <div id="scheduler-container"
-             style="border: 1px solid #e5e7eb; border-radius: 8px; overflow-x: auto; position: relative; isolation: isolate;"
+             style="border: 1px solid #f3f4f6; 
+                    border-radius: 0 0 8px 8px; 
+                    overflow-x: auto; 
+                    overflow-y: auto; 
+                    position: relative; 
+                    isolation: isolate; 
+                    flex: 1;"
              x-data="{
                 isLoading: false,
+                updateCurrentMonth() {
+                    const container = document.getElementById('scheduler-container');
+                    const centerX = container.scrollLeft + (container.clientWidth / 2);
+                    
+                    // Find the date cell at center position
+                    const dateCells = container.querySelectorAll('[data-date]');
+                    let centerCell = null;
+                    
+                    for (let cell of dateCells) {
+                        const cellLeft = cell.offsetLeft;
+                        const cellRight = cellLeft + cell.offsetWidth;
+                        
+                        if (centerX >= cellLeft && centerX <= cellRight) {
+                            centerCell = cell;
+                            break;
+                        }
+                    }
+                    
+                    if (centerCell) {
+                        const dateStr = centerCell.getAttribute('data-date');
+                        if (dateStr) {
+                            const date = new Date(dateStr);
+                            const year = date.getFullYear();
+                            const month = date.getMonth() + 1;
+                            const monthText = year + '년 ' + month + '월';
+                            
+                            // Update month display
+                            const displayText = document.getElementById('month-display-text');
+                            if (displayText) {
+                                displayText.textContent = monthText;
+                            }
+                        }
+                    }
+                },
                 scrollToDate(dateStr) {
                     $nextTick(() => {
                         const selector = '[data-date=' + String.fromCharCode(34) + dateStr + String.fromCharCode(34) + ']';
@@ -186,6 +280,8 @@
                 }
              }"
              @scroll.debounce.150ms="
+                updateCurrentMonth();
+                
                 const scrollLeft = $el.scrollLeft;
                 const scrollWidth = $el.scrollWidth;
                 const clientWidth = $el.clientWidth;
@@ -223,56 +319,67 @@
                         const cellWidth = todayCell.offsetWidth;
                         // 현재 날짜를 중앙에 위치
                         $el.scrollLeft = cellLeft - (containerWidth / 2) + (cellWidth / 2);
+                        // 월 헤더 업데이트
+                        updateCurrentMonth();
                     }
                 });
              ">
             <table style="width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1200px;">
                 <!-- Header: Days -->
                 <thead>
-                    <!-- Month Row -->
-                    <tr>
-                        <th rowspan="2" style="position: sticky; left: 0; z-index: 20; background-color: #F9FBFC; padding: 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; text-align: left; min-width: 100px;">
-                            호실
-                        </th>
-                        @php
-                            $monthGroups = [];
-                            $currentMonth = null;
-                            $monthStart = 0;
-
-                            foreach($days as $index => $day) {
-                                if ($currentMonth !== $day['month']) {
-                                    if ($currentMonth !== null) {
-                                        $monthGroups[] = [
-                                            'month' => $currentMonth,
-                                            'colspan' => $index - $monthStart
-                                        ];
-                                    }
-                                    $currentMonth = $day['month'];
-                                    $monthStart = $index;
-                                }
-                            }
-                            // 마지막 월 추가
-                            if ($currentMonth !== null) {
-                                $monthGroups[] = [
-                                    'month' => $currentMonth,
-                                    'colspan' => count($days) - $monthStart
-                                ];
-                            }
-                        @endphp
-
-                        @foreach($monthGroups as $group)
-                            <th colspan="{{ $group['colspan'] }}" style="padding: 8px 4px; border: 1px solid #e5e7eb; font-weight: 600; color: #374151; text-align: center; font-size: 14px; background-color: #F9FBFC;">
-                                {{ $group['month'] }}월
-                            </th>
-                        @endforeach
-                    </tr>
-
                     <!-- Day Row -->
                     <tr>
-                        @foreach($days as $day)
-                            <th data-is-today="{{ $day['isToday'] ? 'true' : 'false' }}" style="padding: 8px 4px; border: 1px solid #e5e7eb; font-weight: 600; text-align: center; min-width: 40px; font-size: 12px;
-                                {{ $day['isToday'] ? 'background-color: rgba(45, 212, 191, 0.2); color: #2dd4bf;' : ($day['dayOfWeek'] == 6 ? 'background-color: #dbeafe; color: #374151;' : ($day['dayOfWeek'] == 0 ? 'background-color: #fee2e2; color: #374151;' : 'background-color: #F9FBFC; color: #374151;')) }}">
-                                {{ $day['day'] }}
+                        <th style="position: sticky; 
+                                   left: 0; 
+                                   top: 0;
+                                   z-index: 25; 
+                                   background-color: #ffffff; 
+                                   padding: 12px;
+                                   border-right: 1px solid #f3f4f6;
+                                   border-bottom: 1px solid #f3f4f6;
+                                   font-weight: 600; 
+                                   color: #374151; 
+                                   text-align: center; 
+                                   min-width: 100px;">
+                            호실
+                        </th>
+                        @foreach($days as $dayIndex => $day)
+                            @php
+                                $weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+                                $weekDayName = $weekDays[$day['dayOfWeek']];
+                                $isWeekend = $day['dayOfWeek'] == 0 || $day['dayOfWeek'] == 6;
+                            @endphp
+                            <th data-is-today="{{ $day['isToday'] ? 'true' : 'false' }}" 
+                                data-date="{{ $day['date'] }}"
+                                style="position: sticky;
+                                       top: 0;
+                                       z-index: 10;
+                                       border-bottom: 1px solid #f3f4f6;
+                                       border-left: 0;
+                                       border-right: 0;
+                                       border-top: 0;
+                                       padding: 8px 4px; 
+                                       min-width: 60px; 
+                                       background-color: white; 
+                                       vertical-align: middle;">
+                                <div style="text-align: center;">
+                                    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                                        <div style="width: 32px; 
+                                                    height: 32px; 
+                                                    display: flex; 
+                                                    align-items: center; 
+                                                    justify-content: center; 
+                                                    font-size: 15px; 
+                                                    font-weight: 600; 
+                                                    color: {{ $day['isToday'] ? 'white' : ($isWeekend ? '#ef4444' : '#1f2937') }};
+                                                    {{ $day['isToday'] ? 'background-color: #ef4444; border-radius: 50%;' : '' }}">
+                                            {{ $day['day'] }}
+                                        </div>
+                                        <div style="font-size: 11px; color: {{ $day['isToday'] ? '#ef4444' : ($isWeekend ? '#ef4444' : '#9ca3af') }}; font-weight: 500;">
+                                            {{ $weekDayName }}
+                                        </div>
+                                    </div>
+                                </div>
                             </th>
                         @endforeach
                     </tr>
@@ -285,7 +392,7 @@
                             <!-- Room Header -->
                             <td @mouseup="endBarDrag({{ $room['id'] }})"
                                 :class="barDragging && draggedBarStartRoom !== {{ $room['id'] }} ? 'room-drop-target' : ''"
-                                style="position: sticky; left: 0; z-index: 60; padding: 12px; border: 1px solid #e5e7eb; font-weight: 500; color: #374151; isolation: isolate; min-height: 60px; height: 60px; vertical-align: middle; background-color: #F9FBFC;">
+                                style="position: sticky; left: 0; z-index: 60; padding: 12px; border-right: 1px solid #f3f4f6; border-bottom: 1px solid #f3f4f6; font-weight: 500; color: #374151; isolation: isolate; min-height: 47px; height: 47px; vertical-align: middle; text-align: center; background-color: #ffffff;">
                                 <style>
                                     .room-drop-target {
                                         background-color: #e0f2fe !important;
@@ -327,18 +434,32 @@
                                 @endphp
 
                                 <td wire:key="cell-{{ $room['id'] }}-{{ $day['date'] }}"
-                                    style="padding: 0 !important;
-                                           border: 1px solid #e5e7eb;
-                                           height: 60px !important;
-                                           min-height: 60px !important;
-                                           max-height: 60px !important;
-                                           width: 40px;
-                                           min-width: 40px;
-                                           max-width: 40px;"
-                                    :style="isInDragRange({{ $room['id'] }}, '{{ $day['date'] }}') ? 'background-color: #a5f3fc !important;' : '{{ $day['isToday'] ? 'background-color: rgba(45, 212, 191, 0.2);' : ($day['dayOfWeek'] == 6 ? 'background-color: #dbeafe;' : ($day['dayOfWeek'] == 0 ? 'background-color: #fee2e2;' : 'background-color: white;')) }}'"
+                                    style="padding: 4px !important;
+                                           border-bottom: 1px solid #e5e7eb;
+                                           border-right: 1px solid #e5e7eb;
+                                           border-left: 0;
+                                           border-top: 0;
+                                           height: 47px !important;
+                                           min-height: 47px !important;
+                                           max-height: 47px !important;
+                                           width: 61px;
+                                           min-width: 61px;
+                                           max-width: 61px;"
+                                    :style="isInDragRange({{ $room['id'] }}, '{{ $day['date'] }}') ? 'background-color: #a5f3fc !important; border-bottom: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; border-left: 0; border-top: 0; padding: 4px; height: 47px; min-height: 47px; max-height: 47px; width: 61px; min-width: 61px; max-width: 61px;' : 'background-color: white; border-bottom: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; border-left: 0; border-top: 0; padding: 4px; height: 47px; min-height: 47px; max-height: 47px; width: 61px; min-width: 61px; max-width: 61px;'"
                                     @mousedown="startDrag({{ $room['id'] }}, '{{ $day['date'] }}', $event)"
                                     @mouseenter="onDrag({{ $room['id'] }}, '{{ $day['date'] }}')"
                                     @mouseup="endBarDrag({{ $room['id'] }})"
+                                    @dragover.prevent="$event.currentTarget.style.backgroundColor='#bfdbfe'"
+                                    @dragleave="$event.currentTarget.style.backgroundColor=''"
+                                    @drop.prevent="
+                                        const tenantId = $event.dataTransfer.getData('tenantId');
+                                        if (tenantId) {
+                                            $event.currentTarget.style.backgroundColor='';
+                                            const moveInDate = $event.dataTransfer.getData('moveInDate') || '{{ $day['date'] }}';
+                                            const moveOutDate = $event.dataTransfer.getData('moveOutDate') || '{{ $day['date'] }}';
+                                            $wire.openCreateModal({{ $room['id'] }}, moveInDate, moveOutDate, tenantId);
+                                        }
+                                    "
                                     data-room-id="{{ $room['id'] }}"
                                     data-date="{{ $day['date'] }}"
                                     data-day="{{ $day['day'] }}"
@@ -543,6 +664,8 @@
                                              data-tenant-bar="visible"
                                              data-tenant-id="{{ $tenant['id'] }}"
                                              data-width="{{ $calculatedWidth }}"
+                                             data-occupancy-status="{{ $tenant['occupancy_status'] }}"
+                                             data-overdue-days="{{ $tenant['overdue_days'] }}"
                                              :style="`position: absolute !important;
                                                     top: 50% !important;
                                                     left: ${currentLeft}px !important;
@@ -617,26 +740,97 @@
                     @endforeach
                 </tbody>
             </table>
+            
+            <!-- Today's Date Indicator (Red Line) -->
+            @php
+                $todayIndex = collect($days)->search(function($day) {
+                    return $day['isToday'];
+                });
+            @endphp
+            
+            @if($todayIndex !== false)
+                <!-- Red Circle at top -->
+                <div style="position: absolute; 
+                            top: 65px; 
+                            left: {{ 100 + ($todayIndex * 61) + 30.5 - 4 }}px; 
+                            width: 8px; 
+                            height: 8px; 
+                            background-color: #EF4444; 
+                            border-radius: 50%;
+                            z-index: 15; 
+                            pointer-events: none;">
+                </div>
+                <!-- Vertical Line -->
+                <div style="position: absolute; 
+                            top: 73px; 
+                            bottom: 0; 
+                            left: {{ 100 + ($todayIndex * 61) + 30.5 }}px; 
+                            width: 2px; 
+                            background-color: #EF4444; 
+                            z-index: 5; 
+                            pointer-events: none;">
+                </div>
+            @endif
         </div>
-
-        <!-- Legend -->
-        <div style="margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 16px; height: 16px; background-color: #10b981; border-radius: 3px;"></div>
-                <span style="font-size: 13px; color: #6b7280;">납부완료</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 16px; height: 16px; background-color: #f59e0b; border-radius: 3px;"></div>
-                <span style="font-size: 13px; color: #6b7280;">미납</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 16px; height: 16px; background-color: #ef4444; border-radius: 3px;"></div>
-                <span style="font-size: 13px; color: #6b7280;">연체</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <div style="width: 16px; height: 16px; background-color: #9ca3af; border-radius: 3px;"></div>
-                <span style="font-size: 13px; color: #6b7280;">대기</span>
-            </div>
+    </div>
+    
+    <!-- Tooltip Container -->
+    <div x-data="{ 
+            showTooltip: false, 
+            tooltipX: 0, 
+            tooltipY: 0, 
+            tooltipText: '' 
+        }"
+        @mouseover.window="
+            if ($event.target.closest('[data-tenant-bar]')) {
+                const bar = $event.target.closest('[data-tenant-bar]');
+                const status = bar.getAttribute('data-occupancy-status');
+                const overdueDays = bar.getAttribute('data-overdue-days');
+                
+                if (status === 'overdue') {
+                    tooltipText = `퇴실 처리가 필요합니다.\n퇴실일로부터 지난 날짜: +${overdueDays}`;
+                } else if (status === 'reserved') {
+                    tooltipText = '입실 예정입니다.';
+                } else {
+                    tooltipText = '';
+                    return;
+                }
+                
+                showTooltip = true;
+                tooltipX = $event.clientX + 10;
+                tooltipY = $event.clientY + 10;
+            }
+        "
+        @mousemove.window="
+            if (showTooltip) {
+                tooltipX = $event.clientX + 10;
+                tooltipY = $event.clientY + 10;
+            }
+        "
+        @mouseout.window="
+            if (!$event.target.closest('[data-tenant-bar]')) {
+                showTooltip = false;
+            }
+        ">
+        
+        <!-- Tooltip Display -->
+        <div x-show="showTooltip"
+             x-transition
+             :style="`position: fixed; 
+                      top: ${tooltipY}px; 
+                      left: ${tooltipX}px; 
+                      background-color: rgba(0, 0, 0, 0.85); 
+                      color: white; 
+                      padding: 8px 12px; 
+                      border-radius: 6px; 
+                      font-size: 12px; 
+                      white-space: pre-line; 
+                      z-index: 1000; 
+                      pointer-events: none; 
+                      max-width: 250px;
+                      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);`"
+             style="display: none;">
+            <span x-text="tooltipText"></span>
         </div>
     </div>
 </div>

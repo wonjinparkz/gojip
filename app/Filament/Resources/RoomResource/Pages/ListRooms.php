@@ -15,10 +15,12 @@ use Filament\Resources\Pages\Page;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
 use Illuminate\Database\Eloquent\Builder;
+use Livewire\WithPagination;
 
 class ListRooms extends Page implements HasForms
 {
     use InteractsWithForms;
+    use WithPagination;
     protected static string $resource = RoomResource::class;
 
     protected string $view = 'filament.resources.room-resource.pages.list-rooms';
@@ -108,14 +110,13 @@ class ListRooms extends Page implements HasForms
                             ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace(',', '', $state) : null),
                         Forms\Components\TextInput::make('deposit')
                             ->label('보증금')
-                            ->required()
                             ->prefix('₩')
                             ->default(0)
                             ->placeholder('0')
                             ->extraInputAttributes([
                                 'x-mask:dynamic' => '$money($input)',
                             ])
-                            ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace(',', '', $state) : null),
+                            ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace(',', '', $state) : 0),
                     ])
                     ->action(function (array $data) {
                         $branchId = session('current_branch_id', $this->selectedBranchId);
@@ -181,14 +182,13 @@ class ListRooms extends Page implements HasForms
                             ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace(',', '', $state) : null),
                         Forms\Components\TextInput::make('deposit')
                             ->label('보증금')
-                            ->required()
                             ->prefix('₩')
                             ->default(0)
                             ->placeholder('0')
                             ->extraInputAttributes([
                                 'x-mask:dynamic' => '$money($input)',
                             ])
-                            ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace(',', '', $state) : null),
+                            ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace(',', '', $state) : 0),
                     ])
                     ->action(function (array $data) {
                         $branchId = session('current_branch_id', $this->selectedBranchId);
@@ -214,9 +214,20 @@ class ListRooms extends Page implements HasForms
                         }
 
                         $createdCount = 0;
+                        $skippedCount = 0;
                         for ($floor = $startFloor; $floor <= $endFloor; $floor++) {
                             for ($roomNum = 1; $roomNum <= $roomsPerFloor; $roomNum++) {
                                 $roomNumber = $floor . str_pad($roomNum, 2, '0', STR_PAD_LEFT);
+
+                                // Check if room already exists
+                                $exists = Room::where('branch_id', $branchId)
+                                    ->where('room_number', $roomNumber)
+                                    ->exists();
+
+                                if ($exists) {
+                                    $skippedCount++;
+                                    continue;
+                                }
 
                                 Room::create([
                                     'branch_id' => $branchId,
@@ -231,8 +242,13 @@ class ListRooms extends Page implements HasForms
                             }
                         }
 
+                        $message = "{$createdCount}개의 호실이 생성되었습니다";
+                        if ($skippedCount > 0) {
+                            $message .= " ({$skippedCount}개는 이미 존재하여 건너뛰었습니다)";
+                        }
+
                         Notification::make()
-                            ->title("{$createdCount}개의 호실이 생성되었습니다")
+                            ->title($message)
                             ->success()
                             ->send();
                     })
@@ -380,10 +396,10 @@ class ListRooms extends Page implements HasForms
                     ->placeholder('600000'),
                 Forms\Components\TextInput::make('deposit')
                     ->label('보증금')
-                    ->required()
                     ->numeric()
                     ->prefix('₩')
                     ->default(0)
+                    ->dehydrateStateUsing(fn ($state) => $state ?? 0)
                     ->placeholder('0'),
                 Forms\Components\Select::make('status')
                     ->label('상태')
@@ -414,7 +430,7 @@ class ListRooms extends Page implements HasForms
                 'floor' => $this->editFloor,
                 'room_number' => $this->editRoomNumber,
                 'monthly_rent' => $this->editMonthlyRent,
-                'deposit' => $this->editDeposit,
+                'deposit' => $this->editDeposit ?? 0,
                 'room_type' => $this->editRoomType,
                 'status' => $this->editStatus,
             ]);

@@ -66,10 +66,10 @@ class RoomResource extends Resource
                     ->placeholder('600000'),
                 Forms\Components\TextInput::make('deposit')
                     ->label('보증금')
-                    ->required()
                     ->numeric()
                     ->prefix('₩')
                     ->default(0)
+                    ->dehydrateStateUsing(fn ($state) => $state ?? 0)
                     ->placeholder('0'),
                 Forms\Components\Select::make('status')
                     ->label('상태')
@@ -167,10 +167,10 @@ class RoomResource extends Resource
                             ->placeholder('600000'),
                         Forms\Components\TextInput::make('deposit')
                             ->label('보증금')
-                            ->required()
                             ->numeric()
                             ->prefix('₩')
                             ->default(0)
+                            ->dehydrateStateUsing(fn ($state) => $state ?? 0)
                             ->placeholder('0'),
                         Forms\Components\Select::make('status')
                             ->label('상태')

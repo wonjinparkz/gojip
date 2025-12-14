@@ -18,6 +18,11 @@ class Dashboard extends BaseDashboard
     public $scheduleFilter = 'all';
     public $currentDate; // 현재 보고 있는 날짜
     public $showCalendarPopover = false;
+    public $memoType = 'daily'; // 메모 위젯의 현재 타입
+    public $showRoomDetailsModal = false;
+    public $roomStatusFilter = 'all'; // all, occupied, available
+
+    protected $listeners = ['memoTypeChanged' => 'updateMemoType'];
 
     public function mount()
     {
@@ -25,6 +30,21 @@ class Dashboard extends BaseDashboard
         $this->currentMonth = now()->month;
         $this->selectedDate = now()->format('Y-m-d');
         $this->currentDate = now()->format('Y-m-d');
+    }
+
+    public function updateMemoType($type)
+    {
+        $this->memoType = $type;
+    }
+
+    public function toggleRoomDetailsModal()
+    {
+        $this->showRoomDetailsModal = !$this->showRoomDetailsModal;
+    }
+
+    public function setRoomStatusFilter($filter)
+    {
+        $this->roomStatusFilter = $filter;
     }
 
     public function getHeading(): string
@@ -50,19 +70,25 @@ class Dashboard extends BaseDashboard
         $today = $this->currentDate; // 현재 보고 있는 날짜 사용
 
         if ($currentBranchId) {
+            $totalRoomsCount = Room::where('branch_id', $currentBranchId)->count();
+            // tenant_name이 있으면 사용중으로 간주 (호실 관리 페이지와 동일한 로직)
+            $occupiedRoomsCount = Room::where('branch_id', $currentBranchId)
+                ->whereNotNull('tenant_name')
+                ->where('tenant_name', '!=', '')
+                ->count();
+
             $currentBranchStats = [
-                'totalRooms' => Room::where('branch_id', $currentBranchId)->count(),
-                'occupiedRooms' => Room::where('branch_id', $currentBranchId)
-                    ->where('status', 'occupied')
-                    ->count(),
-                'availableRooms' => Room::where('branch_id', $currentBranchId)
-                    ->where('status', 'available')
-                    ->count(),
+                'totalRooms' => $totalRoomsCount,
+                'occupiedRooms' => $occupiedRoomsCount,
+                'availableRooms' => $totalRoomsCount - $occupiedRoomsCount, // 총 호실 - 사용중 = 빈 호실
             ];
 
-            // 빈 호실 목록 가져오기
+            // 빈 호실 목록 가져오기 (tenant_name이 없는 호실)
             $availableRoomsList = Room::where('branch_id', $currentBranchId)
-                ->where('status', 'available')
+                ->where(function($query) {
+                    $query->whereNull('tenant_name')
+                        ->orWhere('tenant_name', '');
+                })
                 ->orderBy('floor', 'asc')
                 ->orderBy('room_number', 'asc')
                 ->get();
@@ -161,12 +187,22 @@ class Dashboard extends BaseDashboard
                         ->get(),
                 ];
             }
+
+            // 층별 호실 데이터 (호실 상세 모달용)
+            $allRooms = Room::where('branch_id', $currentBranchId)
+                ->with('tenant')
+                ->orderBy('floor', 'asc')
+                ->orderBy('room_number', 'asc')
+                ->get();
+
+            $roomsByFloor = $allRooms->groupBy('floor');
         } else {
             $customSchedules = collect();
             $monthCheckIns = collect();
             $monthCheckOuts = collect();
             $monthCustomSchedules = collect();
             $selectedDateSchedules = [];
+            $roomsByFloor = collect();
         }
 
         return [
@@ -185,6 +221,7 @@ class Dashboard extends BaseDashboard
             'monthCheckOuts' => $monthCheckOuts,
             'monthCustomSchedules' => $monthCustomSchedules,
             'selectedDateSchedules' => $selectedDateSchedules,
+            'roomsByFloor' => $roomsByFloor,
         ];
     }
 
