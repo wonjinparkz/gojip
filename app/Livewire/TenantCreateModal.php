@@ -191,7 +191,9 @@ class TenantCreateModal extends Component
 
         $rules = [
             'moveInDate' => 'required|date',
-            'moveOutDate' => 'required|date|after_or_equal:moveInDate',
+            'moveOutDate' => $this->indefiniteMoveOut
+                ? 'nullable'
+                : 'required|date|after_or_equal:moveInDate',
             'paymentStatus' => 'required|in:paid,pending,overdue,waiting',
         ];
 
@@ -210,7 +212,10 @@ class TenantCreateModal extends Component
 
         // 날짜 겹침 검증: 같은 호실에 일정이 겹치는 다른 입주자가 있는지 확인
         $moveInDate = \Carbon\Carbon::parse($this->moveInDate);
-        $moveOutDate = \Carbon\Carbon::parse($this->moveOutDate);
+        // 퇴실일 미정이면 먼 미래로 간주하여 이후의 모든 일정과 overlap 검사
+        $moveOutDate = $this->indefiniteMoveOut
+            ? \Carbon\Carbon::parse('2099-12-31')
+            : \Carbon\Carbon::parse($this->moveOutDate);
 
         $hasOverlap = Tenant::where('room_id', $this->roomId)
             ->where('id', '!=', $this->selectedTenantId)
@@ -268,7 +273,7 @@ class TenantCreateModal extends Component
                 'room_type' => $room->room_type,
                 'monthly_rent' => $room->monthly_rent ?? 0,
                 'move_in_date' => $this->moveInDate,
-                'move_out_date' => $this->moveOutDate,
+                'move_out_date' => $this->indefiniteMoveOut ? null : $this->moveOutDate,
                 'indefinite_move_out' => $this->indefiniteMoveOut,
                 'payment_status' => $this->paymentStatus,
                 'status' => 'active',
@@ -290,7 +295,7 @@ class TenantCreateModal extends Component
                 'room_type' => $room->room_type,
                 'monthly_rent' => $room->monthly_rent ?? 0,
                 'move_in_date' => $this->moveInDate,
-                'move_out_date' => $this->moveOutDate,
+                'move_out_date' => $this->indefiniteMoveOut ? null : $this->moveOutDate,
                 'indefinite_move_out' => $this->indefiniteMoveOut,
                 'payment_status' => $this->paymentStatus,
                 'status' => 'active',
@@ -315,7 +320,7 @@ class TenantCreateModal extends Component
             'status' => 'occupied',
             'tenant_name' => $newTenant->name,
             'move_in_date' => $this->moveInDate,
-            'move_out_date' => $this->moveOutDate,
+            'move_out_date' => $this->indefiniteMoveOut ? null : $this->moveOutDate,
         ]);
 
         Notification::make()

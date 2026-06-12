@@ -72,12 +72,33 @@ class SocialAuthController extends Controller
             // Log the user in
             Auth::login($user, true);
 
-            // Redirect to onboarding if not completed, otherwise to dashboard
-            if (!$user->onboarding_completed) {
-                return redirect()->route('onboarding');
+            // Check if user has branches and rooms
+            $hasBranches = $user->branches()->exists();
+            $hasRooms = $user->branches()->whereHas('rooms')->exists();
+
+            // If user has branches and rooms, mark onboarding as completed
+            if ($hasBranches && $hasRooms) {
+                if (!$user->onboarding_completed) {
+                    $user->update(['onboarding_completed' => true]);
+                }
+
+                // Set current branch in session if not set
+                if (!session()->has('current_branch_id')) {
+                    $firstBranch = $user->branches()->first();
+                    if ($firstBranch) {
+                        session(['current_branch_id' => $firstBranch->id]);
+                    }
+                }
+
+                return redirect('/admin');
             }
 
-            return redirect()->intended('/dashboard');
+            // If no branches or rooms exist, reset onboarding status and redirect to onboarding
+            if ($user->onboarding_completed) {
+                $user->update(['onboarding_completed' => false]);
+            }
+
+            return redirect()->route('onboarding');
 
         } catch (\Exception $e) {
             return redirect()->route('login')->with('error', '소셜 로그인 중 오류가 발생했습니다.');

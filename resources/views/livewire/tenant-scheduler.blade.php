@@ -9,13 +9,39 @@
     draggedTenantId: null,
     draggedBarStartRoom: null,
     draggedTenantData: null,
-    contextMenuTenantId: null,
     contextMenuX: 0,
     contextMenuY: 0,
+    contextMenuTenantId: null,
     editingTenantId: null, // 현재 편집 중인 입주자 ID
+    
+    // 외부에서 주입된 선택된 대기자 ID
+    selectedWaitingTenantId: @js($selectedWaitingTenantId),
+    
+    // 모바일 선택 상태
+    selectedRoomId: null,
+    selectedDate: null,
 
     isEditingTenant(tenantId) {
         return this.editingTenantId === tenantId;
+    },
+    
+    // 모바일 셀 클릭 핸들러
+    handleCellClick(roomId, date, event) {
+        // 모바일 환경에서만 동작 (1024px 미만)
+        if (window.matchMedia('(min-width: 1024px)').matches) return;
+        
+        // 이미 선택된 셀을 다시 클릭하면 선택 해제
+        if (this.selectedRoomId === roomId && this.selectedDate === date) {
+            this.selectedRoomId = null;
+            this.selectedDate = null;
+            return;
+        }
+        
+        this.selectedRoomId = roomId;
+        this.selectedDate = date;
+        
+        // 부모 컴포넌트(ListTenants)로 이벤트 발송
+        $dispatch('schedule-cell-clicked', { roomId: roomId, date: date });
     },
 
     startDrag(roomId, date, event) {
@@ -25,6 +51,10 @@
             event.target.closest('[data-draggable-bar]')) {
             return;
         }
+        
+        // 모바일 환경에서는 드래그 생성 비활성화
+        if (window.matchMedia('(max-width: 1023px)').matches) return;
+
         this.isDragging = true;
         this.dragStartRoomId = roomId;
         this.dragStartDate = date;
@@ -189,9 +219,9 @@
                         container.scrollLeft = cellLeft - (containerWidth / 2) + (cellWidth / 2); 
                     } 
                 })"
-                style="padding: 8px 16px; background-color: transparent; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 6px;"
-                onmouseover="this.style.backgroundColor='#f3f4f6'; this.style.borderColor='#9ca3af';"
-                onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor='#d1d5db';">
+                style="padding: 8px 16px; background-color: transparent; color: #6b7280; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 6px;"
+                onmouseover="this.style.backgroundColor='#f3f4f6';"
+                onmouseout="this.style.backgroundColor='transparent';">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="23 4 23 10 17 10"></polyline>
                 <polyline points="1 20 1 14 7 14"></polyline>
@@ -409,8 +439,12 @@
                                     $matchedTenant = null;
                                     $isStartOutsideRange = false; // 표시 범위 밖에서 시작된 일정인지
 
-                                    foreach ($tenants as $t) {
-                                        if ($t['room_id'] != $room['id']) continue;
+                                    // 최적화: 전체 tenants 루프 대신 해당 호실의 입주자만 순회
+                                    // $tenantsByRoom은 배열이므로 해당 키가 있는지 확인
+                                    $roomTenants = $tenantsByRoom[$room['id']] ?? [];
+
+                                    foreach ($roomTenants as $t) {
+                                        // $tenantsByRoom으로 이미 필터링 되었으므로 room_id 체크 불필요
 
                                         $dateMatch = $day['date'] >= $t['move_in_date'] &&
                                                ($t['move_out_date'] === null || $day['date'] <= $t['move_out_date']);
@@ -445,7 +479,14 @@
                                            width: 61px;
                                            min-width: 61px;
                                            max-width: 61px;"
-                                    :style="isInDragRange({{ $room['id'] }}, '{{ $day['date'] }}') ? 'background-color: #a5f3fc !important; border-bottom: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; border-left: 0; border-top: 0; padding: 4px; height: 47px; min-height: 47px; max-height: 47px; width: 61px; min-width: 61px; max-width: 61px;' : 'background-color: white; border-bottom: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; border-left: 0; border-top: 0; padding: 4px; height: 47px; min-height: 47px; max-height: 47px; width: 61px; min-width: 61px; max-width: 61px;'"
+                                    :style="
+                                        (selectedRoomId === {{ $room['id'] }} && selectedDate === '{{ $day['date'] }}') 
+                                            ? 'background-color: #fef3c7 !important; border: 2px solid #f59e0b !important; box-sizing: border-box;' 
+                                            : (isInDragRange({{ $room['id'] }}, '{{ $day['date'] }}') 
+                                                ? 'background-color: #a5f3fc !important; border-bottom: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; border-left: 0; border-top: 0;' 
+                                                : 'background-color: white; border-bottom: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; border-left: 0; border-top: 0;')
+                                    "
+                                    @click="handleCellClick({{ $room['id'] }}, '{{ $day['date'] }}', $event)"
                                     @mousedown="startDrag({{ $room['id'] }}, '{{ $day['date'] }}', $event)"
                                     @mouseenter="onDrag({{ $room['id'] }}, '{{ $day['date'] }}')"
                                     @mouseup="endBarDrag({{ $room['id'] }})"
@@ -752,7 +793,7 @@
                 <!-- Red Circle at top -->
                 <div style="position: absolute; 
                             top: 65px; 
-                            left: {{ 100 + ($todayIndex * 61) + 30.5 - 4 }}px; 
+                            left: {{ 100 + ($todayIndex * 61) + 27 }}px; 
                             width: 8px; 
                             height: 8px; 
                             background-color: #EF4444; 

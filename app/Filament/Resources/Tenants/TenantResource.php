@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Tenants;
 use App\Filament\Resources\Tenants\Pages\CreateTenant;
 use App\Filament\Resources\Tenants\Pages\EditTenant;
 use App\Filament\Resources\Tenants\Pages\ListTenants;
+use App\Filament\Resources\Tenants\Pages\TmpListTenants;
 use App\Filament\Resources\Tenants\Schemas\TenantForm;
 use App\Filament\Resources\Tenants\Tables\TenantsTable;
 use App\Models\Tenant;
@@ -71,6 +72,7 @@ class TenantResource extends Resource
     {
         return [
             'index' => ListTenants::route('/'),
+            'tmp' => TmpListTenants::route('/tmp'),
             'create' => CreateTenant::route('/create'),
             'edit' => EditTenant::route('/{record}/edit'),
         ];

@@ -18,6 +18,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::redirect('/admin/login', '/login');
+
 Route::get('/pricing', function () {
     return view('pricing');
 })->name('pricing');
@@ -41,10 +43,6 @@ Route::middleware([
     'verified',
     \App\Http\Middleware\CheckOnboardingCompleted::class,
 ])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
-
     // Tenant calendar update endpoint
     Route::post('/admin/tenants/{tenant}/update-dates', function (\App\Models\Tenant $tenant) {
         $validated = request()->validate([

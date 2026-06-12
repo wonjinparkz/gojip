@@ -24,6 +24,16 @@
         @@media (min-width: 1024px) {
             .main-grid-container {
                 grid-template-columns: 400px 1fr !important;
+                /* 뷰포트 기반 고정 높이: 각 컬럼 내부가 독립 스크롤되도록 자식 height: 100% 가 실제 픽셀로 해석되게 함 */
+                height: calc(100vh - 180px) !important;
+                min-height: 500px;
+            }
+
+            /* 좌측(desktop-only) 래퍼도 height: 100% 를 전달해야 waiting-list의 내부 스크롤이 동작 */
+            .main-grid-container > .desktop-only {
+                height: 100%;
+                min-height: 0;
+                overflow: hidden;
             }
         }
 
@@ -31,6 +41,186 @@
         .left-column-fixed {
             min-width: 400px;
             max-width: 400px;
+        }
+
+        /* 모바일 전용 스타일 */
+        @@media (max-width: 1023px) {
+            .desktop-only {
+                display: none !important;
+            }
+            
+            /* Mobile header customization */
+            @@media (max-width: 1023px) {
+                /* Keep sidebar toggle visible and style it */
+                .fi-layout-sidebar-toggle-btn-ctn {
+                    display: flex !important;
+                    align-items: center;
+                    gap: 12px;
+                }
+                
+                /* Hide default large header on mobile */
+                .fi-header-heading {
+                    display: none !important;
+                }
+                
+                /* Hide breadcrumbs if any */
+                .fi-breadcrumbs {
+                    display: none !important;
+                }
+                
+                /* Position custom title next to hamburger */
+                .mobile-header-title {
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #111827;
+                    margin: 0;
+                    white-space: nowrap;
+                }
+                
+                /* Reduce top padding/margin on page header container */
+                .fi-page-header-main-ctn {
+                    padding-top: 8px !important;
+                    margin-top: 0 !important;
+                }
+                
+                /* Make tab toggle buttons smaller on mobile */
+                .mobile-white-bg.mobile-no-padding {
+                    padding: 16px 0 12px 0 !important;
+                }
+                
+                .mobile-white-bg.mobile-no-padding > div {
+                    padding: 3px !important;
+                    gap: 3px !important;
+                }
+                
+                .mobile-white-bg.mobile-no-padding button {
+                    padding: 6px 16px !important;
+                    font-size: 13px !important;
+                }
+                
+                /* Reduce top spacing more aggressively */
+                .main-grid-container {
+                    margin-top: -16px !important;
+                    padding-top: 0 !important;
+                }
+                
+                /* Make filter buttons (전체, 입실, 공실) larger on mobile */
+                .mobile-white-bg.mobile-no-padding + div button,
+                div[style*="gap: 4px"] > button {
+                    height: 36px !important;
+                    padding: 0 16px !important;
+                    font-size: 14px !important;
+                }
+                
+                /* Hide the "호실 현황" header div on mobile */
+                .mobile-white-bg.mobile-no-padding > div[style*="justify-content: space-between"] {
+                    display: none !important;
+                }
+                
+                /* Remove horizontal padding from filter section on mobile */
+                .mobile-white-bg.mobile-no-padding[style*="padding: 0 24px"] {
+                    padding-left: 0 !important;
+                    padding-right: 0 !important;
+                }
+            }
+            
+            /* Hide Footer Toggle Button on Mobile */
+            .footer-toggle-button {
+                display: none !important;
+            }
+            
+            /* Mobile Room Grid */
+            .room-grid-container {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 12px !important;
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+            }
+
+            /* Main Container Override for Mobile Margins */
+            .fi-main {
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+            
+            /* Mobile Room View Overrides */
+            .mobile-white-bg {
+                background-color: white !important;
+                border-radius: 12px !important;
+            }
+            .mobile-no-padding {
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+            .mobile-hidden-text {
+                display: none !important;
+            }
+            
+            .mobile-bottom-btn-container {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 16px;
+                background: linear-gradient(to top, white 80%, rgba(255,255,255,0));
+                z-index: 40;
+                display: flex;
+                justify-content: center;
+                pointer-events: none; /* Let clicks pass through the gradient area */
+            }
+            .mobile-bottom-btn {
+                pointer-events: auto; /* Re-enable clicks for the button */
+                width: 100%;
+                height: 56px;
+                border-radius: 12px;
+                background-color: white;
+                color: black;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px; /* Add gap for icon */
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                border: 1px solid #e5e7eb;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .mobile-bottom-btn:active {
+                background-color: #f9fafb;
+                transform: scale(0.98);
+            }
+            .bottom-sheet-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 50;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+            }
+            .bottom-sheet-content {
+                background-color: white;
+                border-radius: 20px 20px 0 0;
+                padding-bottom: env(safe-area-inset-bottom);
+                max-height: 85vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                animation: slideUp 0.3s ease-out;
+            }
+            @@keyframes slideUp {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+            }
+        }
+        @@media (min-width: 1024px) {
+            .mobile-only {
+                display: none !important;
+            }
         }
     </style>
 
@@ -46,142 +236,128 @@
                     // 확장
                     collapsed.style.display = 'none';
                     expanded.style.display = 'flex';
-                    card.style.height = '180px';
+                    card.style.minHeight = '170px';
+                    card.style.padding = '16px';
                     card.style.zIndex = '10';
                 } else {
                     // 축소
                     collapsed.style.display = 'flex';
                     expanded.style.display = 'none';
-                    card.style.height = '60px';
+                    card.style.minHeight = '48px';
+                    card.style.padding = '0 16px';
                     card.style.zIndex = '1';
                 }
             }
         }
 
+        // URL 탭 파라미터 업데이트 함수
+        function updateUrlTab(tab) {
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tab);
+            window.history.pushState({}, '', url);
+        }
+
+        // 모바일에서 페이지 제목을 햄버거 아이콘 옆에 추가
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.innerWidth < 1024) {
+                const toggleContainer = document.querySelector('.fi-layout-sidebar-toggle-btn-ctn');
+                if (toggleContainer && !document.querySelector('.mobile-header-title')) {
+                    const title = document.createElement('h1');
+                    title.className = 'mobile-header-title';
+                    title.textContent = '{{ $this->getHeading() }}';
+                    toggleContainer.appendChild(title);
+                }
+            }
+            
+            // URL에서 탭 파라미터 읽어서 초기화
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabParam = urlParams.get('tab');
+            if (tabParam && (tabParam === 'rooms' || tabParam === 'schedule')) {
+                // Livewire 컴포넌트에 탭 설정
+                window.Livewire.find('{{ $this->getId() }}').set('activeTab', tabParam);
+            }
+        });
+
     </script>
 
     <!-- Main 2-Column Grid: Always visible -->
     <div class="main-grid-container"
-         x-data="{}"
-         @refresh-tenants.window="$wire.$refresh()">
+         x-data="{ showMobileWaitingList: false }"
+         @refresh-tenants.window="$wire.$refresh()"
+         @schedule-cell-clicked.window="
+            showMobileWaitingList = true;
+            $wire.handleScheduleCellClicked($event.detail.roomId, $event.detail.date);
+         "
+         @close-mobile-waiting-list.window="showMobileWaitingList = false">
 
-        <!-- Left Column: 입실 대기자 목록 (Fixed) -->
-        <div>
-            <div style="display: flex; flex-direction: column; border-radius: 16px; background-color: #f8f8f8; border: none; box-shadow: none; height: 100%;">
-                <!-- Header -->
-                <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px; background-color: #f8f8f8; border-radius: 16px 16px 0 0;">
-                    <div style="display: flex; align-items: center; justify-content: space-between;">
-                        <div style="font-size: 18px; font-weight: 500; line-height: 1;">입실 대기자 목록</div>
+        <!-- Left Column: 입실 대기자 목록 (Fixed) - Desktop Only -->
+        <div class="desktop-only">
+            @include('filament.resources.tenants.pages.partials.waiting-list')
+        </div>
+
+        <!-- Mobile Bottom Floating Button -->
+        <div class="mobile-only mobile-bottom-btn-container">
+            @php
+                $selectedTenant = $selectedWaitingTenantId ? $waitingTenants->firstWhere('id', $selectedWaitingTenantId) : null;
+            @endphp
+
+            @if($selectedTenant)
+                <div class="mobile-bottom-btn" style="justify-content: space-between; padding: 0 24px; cursor: default; border-color: #6CE0CF; border-width: 2px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-weight: 600; color: #111827;">{{ $selectedTenant->name }}</span>
+                        <span style="font-size: 14px; font-weight: 400; color: #6b7280;">선택됨</span>
                     </div>
-                    <!-- Filter Buttons -->
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <button
-                            wire:click="setWaitingFilter('all')"
-                            style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-weight: 500; padding: 0 12px; height: 28px; border-radius: 9999px; font-size: 12px; transition: all 0.2s; cursor: pointer; background-color: {{ $waitingFilter === 'all' ? 'black' : 'white' }}; color: {{ $waitingFilter === 'all' ? 'white' : '#374151' }}; border: 1px solid {{ $waitingFilter === 'all' ? 'black' : '#e5e7eb' }};"
-                            @if($waitingFilter !== 'all') onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='white'" @else onmouseover="this.style.backgroundColor='#374151'" onmouseout="this.style.backgroundColor='black'" @endif>
-                            전체
-                        </button>
-                        <button
-                            wire:click="setWaitingFilter('short_term')"
-                            style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-weight: 500; padding: 0 12px; height: 28px; border-radius: 9999px; font-size: 12px; transition: all 0.2s; cursor: pointer; background-color: {{ $waitingFilter === 'short_term' ? 'black' : 'white' }}; color: {{ $waitingFilter === 'short_term' ? 'white' : '#374151' }}; border: 1px solid {{ $waitingFilter === 'short_term' ? 'black' : '#e5e7eb' }};"
-                            @if($waitingFilter !== 'short_term') onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='white'" @else onmouseover="this.style.backgroundColor='#374151'" onmouseout="this.style.backgroundColor='black'" @endif>
-                            단기
-                        </button>
-                        <button
-                            wire:click="setWaitingFilter('long_term')"
-                            style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-weight: 500; padding: 0 12px; height: 28px; border-radius: 9999px; font-size: 12px; transition: all 0.2s; cursor: pointer; background-color: {{ $waitingFilter === 'long_term' ? 'black' : 'white' }}; color: {{ $waitingFilter === 'long_term' ? 'white' : '#374151' }}; border: 1px solid {{ $waitingFilter === 'long_term' ? 'black' : '#e5e7eb' }};"
-                            @if($waitingFilter !== 'long_term') onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='white'" @else onmouseover="this.style.backgroundColor='#374151'" onmouseout="this.style.backgroundColor='black'" @endif>
-                            중장기
-                        </button>
-                    </div>
+                    <button
+                        wire:click="selectWaitingTenant({{ $selectedTenant->id }})"
+                        onclick="return confirm('배정을 취소하시겠습니까?');"
+                        style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background-color: #f3f4f6; border: none; cursor: pointer; color: #4b5563; transition: background-color 0.2s;"
+                        onmouseover="this.style.backgroundColor='#e5e7eb'"
+                        onmouseout="this.style.backgroundColor='#f3f4f6'">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 </div>
-                <!-- Content: Waiting List -->
-                <div style="padding: 0;">
-                    <div style="overflow-y: auto; padding: 0 16px 4px 16px; min-height: 250px; max-height: 65vh;">
-                        @forelse($waitingTenants as $tenant)
-                            <!-- Waiting Resident Card -->
-                            <div
-                                wire:click="selectWaitingTenant({{ $tenant->id }})"
-                                draggable="true"
-                                data-tenant-id="{{ $tenant->id }}"
-                                data-tenant-name="{{ $tenant->name }}"
-                                @dragstart="
-                                    $event.dataTransfer.effectAllowed = 'copy';
-                                    $event.dataTransfer.setData('tenantId', '{{ $tenant->id }}');
-                                    $event.dataTransfer.setData('tenantName', '{{ $tenant->name }}');
-                                    $event.dataTransfer.setData('moveInDate', '{{ $tenant->move_in_date?->format('Y-m-d') ?? '' }}');
-                                    $event.dataTransfer.setData('moveOutDate', '{{ $tenant->move_out_date?->format('Y-m-d') ?? '' }}');
-                                    $event.dataTransfer.setData('isShortTerm', '{{ $tenant->is_short_term ? '1' : '0' }}');
-                                    $event.dataTransfer.setData('shortTermMonthlyRent', '{{ $tenant->short_term_monthly_rent ?? '' }}');
-                                    $event.dataTransfer.setData('shortTermDeposit', '{{ $tenant->short_term_deposit ?? '' }}');
-                                    $event.dataTransfer.setData('indefiniteMoveOut', '{{ $tenant->indefinite_move_out ? '1' : '0' }}');
-                                    $event.target.style.opacity = '0.5';
-                                "
-                                @dragend="$event.target.style.opacity = '1'"
-                                style="margin-top: 0; margin-bottom: 12px; padding: 16px 16px 16px 24px; background-color: white; max-height: 200px; overflow-y: auto; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: all 0.2s; cursor: pointer; {{ $selectedWaitingTenantId === $tenant->id ? 'border: 3px solid #6CE0CF;' : '' }}"
-                                onmouseover="this.style.backgroundColor='rgba(64, 192, 192, 0.1)'"
-                                onmouseout="this.style.backgroundColor='white'">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <div style="padding-right: 8px;">
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <h3 style="font-weight: 500;">{{ $tenant->name }}</h3>
-                                        </div>
-                                        <div style="margin-top: 4px;">
-                                            <div style="font-size: 12px; color: #4b5563;">
-                                                <div style="display: flex; align-items: center; gap: 8px;">
-                                                    <span>📅 입실일: {{ $tenant->move_in_date ? $tenant->move_in_date->format('Y.m.d') : '-' }}</span>
-                                                    @if($tenant->move_in_date && $tenant->move_in_date->isToday())
-                                                        <span style="display: inline-flex; padding: 2px 8px; background-color: #10b981; color: white; border-radius: 9999px; font-size: 11px; font-weight: 600;">오늘</span>
-                                                    @endif
-                                                </div>
-                                                <div>
-                                                    <span>📅 퇴실일: {{ $tenant->indefinite_move_out ? '미정' : ($tenant->move_out_date ? $tenant->move_out_date->format('Y.m.d') : '-') }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <p style="font-size: 12px; margin-top: 4px; color: #4b5563;">🏠 월세 {{ number_format($tenant->monthly_rent) }}원</p>
-                                        <div style="display: flex; align-items: center; gap: 4px; margin-top: 4px;">
-                                            <span style="font-size: 12px;">📞</span>
-                                            <p style="font-size: 12px; color: #4b5563;">{{ $tenant->phone ?? '-' }}</p>
-                                        </div>
-                                        <p style="font-size: 12px; margin-top: 4px; color: #4b5563;">📝 {{ $tenant->is_short_term ? '단기 입주' : '장기 입주' }}</p>
-                                    </div>
-                                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                                        <button
-                                            wire:click.stop="editWaitingTenant({{ $tenant->id }})"
-                                            style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-weight: 500; height: 36px; border-radius: 6px; padding: 0 12px; background: transparent; border: none; cursor: pointer; transition: all 0.2s;"
-                                            onmouseover="this.style.backgroundColor='transparent'; this.style.fontWeight='bold'"
-                                            onmouseout="this.style.backgroundColor='transparent'; this.style.fontWeight='500'">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>
-                                        </button>
-                                        <button
-                                            wire:click.stop="openRoomAssignModal({{ $tenant->id }})"
-                                            style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-weight: 500; height: 36px; border-radius: 6px; padding: 0 12px; background: transparent; border: none; cursor: pointer; transition: all 0.2s;"
-                                            onmouseover="this.style.backgroundColor='transparent'; this.style.fontWeight='bold'"
-                                            onmouseout="this.style.backgroundColor='transparent'; this.style.fontWeight='500'">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        @empty
-                            <div style="display: flex; align-items: center; justify-content: center; height: 200px; color: #9ca3af;">
-                                <p style="font-size: 14px;">입실 대기자가 없습니다.</p>
-                            </div>
-                        @endforelse
-                    </div>
+            @else
+                <button class="mobile-bottom-btn" @click="showMobileWaitingList = true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    입실 대기자 보기
+                </button>
+            @endif
+        </div>
+
+        <!-- Mobile Bottom Sheet -->
+        <div
+            x-show="showMobileWaitingList"
+            style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: transparent; z-index: 50; display: block; pointer-events: none;"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0">
+            <div class="bottom-sheet-content" style="position: absolute; bottom: 0; left: 0; right: 0; width: 100%; max-height: 85vh; border-radius: 20px 20px 0 0; overflow: hidden; pointer-events: auto;">
+                <div style="height: auto; max-height: 85vh; overflow-y: auto;">
+                    @include('filament.resources.tenants.pages.partials.waiting-list', ['mobileHeightAuto' => true])
                 </div>
             </div>
         </div>
 
         <!-- Right Column: Dynamic Content Box -->
         <div style="min-width: 0; overflow: hidden;">
-            <div style="display: flex; flex-direction: column; border-radius: 16px; background-color: #f8f8f8; border: none; box-shadow: none; height: 100%; width: 100%; max-width: 100%; overflow: hidden;">
+            <div class="mobile-white-bg" style="display: flex; flex-direction: column; border-radius: 16px; background-color: #f8f8f8; border: none; box-shadow: none; height: 100%; width: 100%; max-width: 100%; overflow: hidden;">
                 <!-- Tabs Navigation (Inside right box) -->
-                <div style="padding: 24px 24px 16px 24px; background-color: #f8f8f8; border-radius: 16px 16px 0 0; flex-shrink: 0;">
+                <div class="mobile-white-bg mobile-no-padding" style="padding: 24px 24px 16px 24px; background-color: #f8f8f8; border-radius: 16px 16px 0 0; flex-shrink: 0;">
                     <div style="display: inline-flex; background-color: #ffffff; border-radius: 999px; padding: 4px; gap: 4px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
                         <button
                             wire:click="setActiveTab('rooms')"
+                            onclick="updateUrlTab('rooms')"
                             style="
                                 padding: 10px 24px;
                                 border-radius: 999px;
@@ -201,6 +377,7 @@
                         </button>
                         <button
                             wire:click="setActiveTab('schedule')"
+                            onclick="updateUrlTab('schedule')"
                             style="
                                 padding: 10px 24px;
                                 border-radius: 999px;
@@ -216,7 +393,7 @@
                             onmouseover="if ('{{ $activeTab }}' !== 'schedule') { this.style.color='#374151'; }"
                             onmouseout="if ('{{ $activeTab }}' !== 'schedule') { this.style.color='#6b7280'; }"
                         >
-                            입실 관리
+                            입퇴실 일정
                         </button>
                     </div>
                 </div>
@@ -231,27 +408,24 @@
                             @endphp
 
                             <!-- Header -->
-                            <div style="padding: 0 24px 16px 24px; display: flex; flex-direction: column; gap: 16px; background-color: #f8f8f8; flex-shrink: 0;">
-                                <div style="display: flex; align-items: center; justify-content: space-between;">
-                                    <div style="font-size: 18px; font-weight: 500; line-height: 1;">호실 현황</div>
-                                </div>
+                            <div class="mobile-no-padding mobile-white-bg" style="padding: 0 24px 16px 24px; display: flex; flex-direction: column; gap: 16px; background-color: #f8f8f8; flex-shrink: 0;">
                                 <!-- Filter Buttons -->
-                                <div style="display: flex; align-items: center; gap: 4px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
                                     <button
                                         wire:click="setRoomFilter('all')"
-                                        style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-weight: 500; padding: 0 12px; height: 28px; border-radius: 9999px; font-size: 12px; transition: all 0.2s; cursor: pointer; background-color: {{ $roomFilter === 'all' ? 'black' : 'white' }}; color: {{ $roomFilter === 'all' ? 'white' : '#374151' }}; border: 1px solid {{ $roomFilter === 'all' ? 'black' : '#e5e7eb' }};"
+                                        style="display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; font-weight: 600; padding: 6px 16px; border-radius: 9999px; font-size: 14px; transition: all 0.2s; cursor: pointer; background-color: {{ $roomFilter === 'all' ? 'black' : 'white' }}; color: {{ $roomFilter === 'all' ? 'white' : '#94a3b8' }}; border: 1px solid {{ $roomFilter === 'all' ? 'black' : '#e2e8f0' }};"
                                         @if($roomFilter !== 'all') onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='white'" @else onmouseover="this.style.backgroundColor='#374151'" onmouseout="this.style.backgroundColor='black'" @endif>
                                         전체
                                     </button>
                                     <button
                                         wire:click="setRoomFilter('occupied')"
-                                        style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-weight: 500; padding: 0 12px; height: 28px; border-radius: 9999px; font-size: 12px; transition: all 0.2s; cursor: pointer; background-color: {{ $roomFilter === 'occupied' ? 'black' : 'white' }}; color: {{ $roomFilter === 'occupied' ? 'white' : '#374151' }}; border: 1px solid {{ $roomFilter === 'occupied' ? 'black' : '#e5e7eb' }};"
+                                        style="display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; font-weight: 600; padding: 6px 16px; border-radius: 9999px; font-size: 14px; transition: all 0.2s; cursor: pointer; background-color: {{ $roomFilter === 'occupied' ? 'black' : 'white' }}; color: {{ $roomFilter === 'occupied' ? 'white' : '#94a3b8' }}; border: 1px solid {{ $roomFilter === 'occupied' ? 'black' : '#e2e8f0' }};"
                                         @if($roomFilter !== 'occupied') onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='white'" @else onmouseover="this.style.backgroundColor='#374151'" onmouseout="this.style.backgroundColor='black'" @endif>
                                         입실
                                     </button>
                                     <button
                                         wire:click="setRoomFilter('vacant')"
-                                        style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-weight: 500; padding: 0 12px; height: 28px; border-radius: 9999px; font-size: 12px; transition: all 0.2s; cursor: pointer; background-color: {{ $roomFilter === 'vacant' ? 'black' : 'white' }}; color: {{ $roomFilter === 'vacant' ? 'white' : '#374151' }}; border: 1px solid {{ $roomFilter === 'vacant' ? 'black' : '#e5e7eb' }};"
+                                        style="display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; font-weight: 600; padding: 6px 16px; border-radius: 9999px; font-size: 14px; transition: all 0.2s; cursor: pointer; background-color: {{ $roomFilter === 'vacant' ? 'black' : 'white' }}; color: {{ $roomFilter === 'vacant' ? 'white' : '#94a3b8' }}; border: 1px solid {{ $roomFilter === 'vacant' ? 'black' : '#e2e8f0' }};"
                                         @if($roomFilter !== 'vacant') onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='white'" @else onmouseover="this.style.backgroundColor='#374151'" onmouseout="this.style.backgroundColor='black'" @endif>
                                         공실
                                     </button>
@@ -260,19 +434,20 @@
 
                             <!-- Content: Room Cards -->
                             <div style="padding: 0; flex: 1; min-height: 0; overflow: hidden;">
-                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 4px 16px 32px 16px; height: 100%; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth;">
+                                <div class="room-grid-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 4px 16px 32px 16px; height: 100%; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth;">
 
                                 @forelse($rooms as $room)
                                     @php
                                         $currentTenant = $room->tenant;
                                         $isOccupied = $currentTenant !== null;
-                                        $bgColor = $isOccupied ? 'white' : '#e5e7eb';
+                                        $bgColor = $isOccupied ? 'white' : 'rgba(229,231,235,0.6)';
                                         $isAvailableForSelectedTenant = $this->isRoomAvailableForSelectedTenant($room->id);
                                     @endphp
 
                                     <!-- Room Card -->
-                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                    <div style="display: flex; flex-direction: column; gap: 8px;">
                                         <div
+                                            wire:click="handleRoomClick({{ $room->id }})"
                                             @dragover.prevent="$event.currentTarget.style.borderColor='#40BCBC'; $event.currentTarget.style.borderWidth='3px'; $event.currentTarget.style.borderStyle='dashed';"
                                             @dragleave="$event.currentTarget.style.borderColor=''; $event.currentTarget.style.borderWidth=''; $event.currentTarget.style.borderStyle='';"
                                             @drop.prevent="
@@ -285,8 +460,8 @@
                                                     const moveOutDate = $event.dataTransfer.getData('moveOutDate');
                                                     const indefiniteMoveOut = $event.dataTransfer.getData('indefiniteMoveOut');
 
-                                                    // 퇴실일 미정이고 입실일이 있으면 바로 배정
-                                                    if (indefiniteMoveOut === '1' && moveInDate) {
+                                                    // 퇴실일 미정이거나 퇴실일이 있고 입실일이 있으면 바로 배정
+                                                    if (moveInDate && (indefiniteMoveOut === '1' || moveOutDate)) {
                                                         // 퇴실일이 없으면 입실일과 동일하게 설정
                                                         const finalMoveOutDate = moveOutDate || moveInDate;
                                                         $wire.assignTenantDirectly({{ $room->id }}, tenantId, moveInDate, finalMoveOutDate);
@@ -295,62 +470,66 @@
                                                     }
                                                 }
                                             "
-                                            style="border-radius: 16px; padding: 12px; height: 180px; display: flex; flex-direction: column; transition: all 0.3s; cursor: pointer; width: 100%; position: relative; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); background-color: {{ $bgColor }}; {{ $isAvailableForSelectedTenant ? 'border: 3px solid #6CE0CF;' : '' }}">
-                                            <div style="flex: none; padding-top: 8px; padding-left: 8px;">
-                                                <div style="display: flex; justify-content: space-between;">
-                                                    <h3 style="font-weight: bold;">{{ $room->room_number }}호</h3>
-                                                </div>
-                                                <p style="font-size: 14px;">{{ $room->room_type ?? '스탠다드룸' }} | {{ number_format($room->monthly_rent) }}원</p>
-                                            </div>
-                                            <div style="margin-top: auto; flex: none;">
-                                                @if($isOccupied)
-                                                    <div style="margin-top: 8px; background-color: white; border-radius: 6px; padding: 8px;">
-                                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                                            <div
-                                                                wire:click.stop="editTenant({{ $currentTenant->id }})"
-                                                                style="flex-grow: 1; cursor: pointer; border-radius: 4px; padding: 4px; transition: background-color 0.2s;"
-                                                                onmouseover="this.style.backgroundColor='#f3f4f6'"
-                                                                onmouseout="this.style.backgroundColor='transparent'">
-                                                                <div style="display: flex; align-items: center; justify-content: space-between;">
-                                                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                                                        <span style="font-size: 14px; font-weight: 500; color: black;">{{ $currentTenant->name }}</span>
-                                                                    </div>
-                                                                    <svg
-                                                                        wire:click.stop="removeTenantFromRoom({{ $currentTenant->id }})"
-                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                        width="14"
-                                                                        height="14"
-                                                                        viewBox="0 0 24 24"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        stroke-width="2"
-                                                                        stroke-linecap="round"
-                                                                        stroke-linejoin="round"
-                                                                        style="color: #6b7280; margin-left: 8px; transition: color 0.2s; cursor: pointer;"
-                                                                        onmouseover="this.style.stroke='#ef4444'"
-                                                                        onmouseout="this.style.stroke='#6b7280'">
-                                                                        <circle cx="12" cy="12" r="10"></circle>
-                                                                        <path d="m15 9-6 6"></path>
-                                                                        <path d="m9 9 6 6"></path>
-                                                                    </svg>
-                                                                </div>
-                                                                <div style="font-size: 12px; color: #4b5563; text-align: left;">
-                                                                    <div style="margin-bottom: 2px; white-space: nowrap;">
-                                                                        <span>입실일: {{ $currentTenant->move_in_date ? $currentTenant->move_in_date->format('Y.m.d') : '-' }}</span>
-                                                                    </div>
-                                                                    <div style="white-space: nowrap;">
-                                                                        <span>퇴실일: {{ $currentTenant->indefinite_move_out ? '미정' : ($currentTenant->move_out_date ? $currentTenant->move_out_date->format('Y.m.d') : '-') }}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                            style="border-radius: 28px; padding: 16px; min-height: 170px; display: flex; flex-direction: column; transition: all 0.2s; cursor: pointer; width: 100%; position: relative; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); border: 1px solid #f1f5f9; background-color: {{ $bgColor }}; {{ $isAvailableForSelectedTenant ? 'border: 2px solid #6CE0CF; background-color: #e6f6f4;' : '' }}"
+                                            onmouseover="if(!this.dataset.selected){this.style.backgroundColor='#e6f6f4';this.style.borderColor='transparent';this.style.boxShadow='0 4px 6px -1px rgba(0,0,0,0.1)';}"
+                                            onmouseout="if(!this.dataset.selected){this.style.backgroundColor='{{ $bgColor }}';this.style.borderColor='#f1f5f9';this.style.boxShadow='0 1px 2px 0 rgba(0,0,0,0.05)';}"
+                                            {!! $isAvailableForSelectedTenant ? 'data-selected="true"' : '' !!}>
+                                            <div style="margin-bottom: 8px;">
+                                                <div style="font-size: 18px; font-weight: 800; line-height: 1.25; color: #1e293b;">{{ $room->room_number }}호</div>
+                                                <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px; margin-bottom: 4px;">
+                                                    <span style="font-size: 12px; font-weight: 700; color: #64748b;">{{ $room->room_type ?? '스탠다드' }}</span>
+                                                    <div style="display: flex; align-items: center; gap: 4px;">
+                                                        @if($room->room_category)
+                                                        <span style="font-size: 9px; padding: 2px 4px; border-radius: 4px; border: 1px solid rgba(226,232,240,0.5); font-weight: 700; color: #94a3b8; background-color: white;">{{ $room->room_category }}</span>
+                                                        @endif
+                                                        @if($room->window_structure)
+                                                        <span style="font-size: 9px; padding: 2px 4px; border-radius: 4px; border: 1px solid rgba(226,232,240,0.5); font-weight: 700; color: #94a3b8; background-color: white;">{{ $room->window_structure }}</span>
+                                                        @endif
+                                                        @if($room->gender)
+                                                        <div style="display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; {{ $room->gender === '남성' ? 'background-color: #e0f2fe; color: #0ea5e9;' : ($room->gender === '여성' ? 'background-color: #fce7f3; color: #ec4899;' : 'background-color: #f3f4f6; color: #6b7280;') }}">
+                                                            @if($room->gender === '남성')
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="15" r="6"/><path d="M14 10l7-7"/><path d="M14 3h7v7"/></svg>
+                                                            @elseif($room->gender === '여성')
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M12 15v7"/><path d="M9 19h6"/></svg>
+                                                            @endif
                                                         </div>
+                                                        @endif
                                                     </div>
-                                                @else
-                                                    <div style="display: flex; align-items: start; justify-content: center; padding-top: 8px; height: 64px; background-color: transparent; border-radius: 6px; color: #6b7280;">
-                                                        <span style="font-size: 12px; opacity: 0; transition: opacity 0.2s;">공실입니다</span>
-                                                    </div>
-                                                @endif
+                                                </div>
+                                                <div style="font-size: 16px; font-weight: 700; color: #334155;">{{ number_format($room->monthly_rent) }}원</div>
                                             </div>
+                                            @if($isOccupied)
+                                                <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226,232,240,0.2);">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                                                        <span
+                                                            wire:click.stop="editTenant({{ $currentTenant->id }})"
+                                                            style="font-size: 18px; font-weight: 800; color: #1e293b; cursor: pointer;">{{ $currentTenant->name }}</span>
+                                                        <svg
+                                                            wire:click.stop="removeTenantFromRoom({{ $currentTenant->id }})"
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            width="16"
+                                                            height="16"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            stroke-width="2"
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            style="color: #cbd5e1; transition: color 0.2s; cursor: pointer; flex-shrink: 0;"
+                                                            onmouseover="this.style.color='#f87171'"
+                                                            onmouseout="this.style.color='#cbd5e1'">
+                                                            <circle cx="12" cy="12" r="10"></circle>
+                                                            <path d="m15 9-6 6"></path>
+                                                            <path d="m9 9 6 6"></path>
+                                                        </svg>
+                                                    </div>
+                                                    @php
+                                                        $startDate = $currentTenant->move_in_date ? $currentTenant->move_in_date->format('y.m.d') : '-';
+                                                        $endDate = $currentTenant->indefinite_move_out ? '미정' : ($currentTenant->move_out_date ? $currentTenant->move_out_date->format('y.m.d') : '-');
+                                                    @endphp
+                                                    <div style="font-size: 12px; font-weight: 600; line-height: 1.25; color: black;">{{ $startDate }}~{{ $endDate }}</div>
+                                                </div>
+                                            @endif
                                         </div>
                                         @php
                                             $futureTenants = $room->futureTenants;
@@ -362,37 +541,34 @@
                                             onclick="toggleFutureTenants({{ $room->id }})"
                                             class="group"
                                             style="
-                                                border-radius: 16px;
-                                                padding: 12px;
-                                                height: 60px;
+                                                border-radius: 22px;
+                                                padding: 0 16px;
+                                                min-height: 48px;
                                                 display: flex;
                                                 flex-direction: column;
-                                                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                                                justify-content: center;
+                                                box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
                                                 transition: all 0.3s ease-in-out;
                                                 cursor: pointer;
                                                 width: 100%;
                                                 position: relative;
                                                 z-index: 1;
                                                 isolation: isolate;
-                                                background-color: {{ $futureTenantsCount > 0 ? 'rgba(64, 192, 192, 0.1)' : '#d1d5db' }};
+                                                {{ $futureTenantsCount > 0 ? 'background-color: white; border: 1px solid #f1f5f9;' : 'background-color: rgba(226,232,240,0.6); border: 1px solid transparent;' }}
                                             "
                                         >
                                             @if($futureTenantsCount > 0)
                                                 <!-- 미래 입주자가 있는 경우 -->
-                                                <div id="future-collapsed-{{ $room->id }}" style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
-                                                    <div style="text-align: center; transition: opacity 0.2s; transition-delay: 0.3s; opacity: 1;">
-                                                        <div class="default-text" style="color: #9ca3af; font-size: 14px; text-align: center;">
-                                                            🛌 +<span style="font-weight: bold;">{{ $futureTenantsCount }}</span>
-                                                        </div>
-                                                        <span class="hover-text" style="color: #9ca3af; font-size: 12px; text-align: center; display: none;">
-                                                            {{ $room->room_number }}호에 다음 입실자 배정하기
-                                                        </span>
-                                                    </div>
+                                                <div id="future-collapsed-{{ $room->id }}" style="display: flex; align-items: center; justify-content: space-between; min-height: 48px;">
+                                                    <span style="font-size: 12px; font-weight: 700; color: #64748b;">다음 입실자 +{{ $futureTenantsCount }}</span>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #94a3b8; transition: transform 0.2s;">
+                                                        <path d="m6 9 6 6 6-6"/>
+                                                    </svg>
                                                 </div>
 
                                                 <!-- 미래 입주자 리스트 (확장) -->
-                                                <div id="future-expanded-{{ $room->id }}" style="display: none; flex-direction: column; justify-content: center; height: 100%;">
-                                                    <div style="padding: 8px; transition: opacity 0.2s; transition-delay: 0.3s; opacity: 1; overflow-y: auto;">
+                                                <div id="future-expanded-{{ $room->id }}" style="display: none; flex-direction: column; justify-content: center; flex: 1;">
+                                                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(226,232,240,0.4); transition: opacity 0.2s; transition-delay: 0.3s; opacity: 1; overflow-y: auto;">
                                                         <div style="display: flex; flex-direction: column; gap: 8px;">
                                                             @foreach($futureTenants as $index => $futureTenant)
                                                                 @php
@@ -462,20 +638,15 @@
 
                                                                 <div style="padding-bottom: 8px; {{ !$loop->last ? 'border-bottom: 1px solid #e5e7eb;' : '' }}">
                                                                     <div style="text-align: left;">
-                                                                        <div style="font-size: 14px; font-weight: 500; color: black; margin-bottom: 4px;">
-                                                                            {{ $futureTenant->name }}
+                                                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                                                            <span style="font-size: 18px; font-weight: 800; color: #1e293b;">{{ $futureTenant->name }}</span>
+                                                                            <svg wire:click.stop="removeTenantFromRoom({{ $futureTenant->id }})" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #cbd5e1; transition: color 0.2s; cursor: pointer; flex-shrink: 0;" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#cbd5e1'"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>
                                                                         </div>
-                                                                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                                                                            <div style="font-size: 12px; color: #4b5563; text-align: left;">
-                                                                                <div style="margin-bottom: 2px; display: flex; align-items: center; gap: 8px;">
-                                                                                    <span>입실일: {{ $futureTenant->move_in_date ? $futureTenant->move_in_date->format('Y.m.d') : '-' }}</span>
-                                                                                </div>
-                                                                                <div>
-                                                                                    <span style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0;">📅</span>퇴실일: {{ $futureTenant->indefinite_move_out ? '미정' : ($futureTenant->move_out_date ? $futureTenant->move_out_date->format('Y.m.d') : '-') }}
-                                                                                </div>
-                                                                            </div>
-                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6b7280; margin-left: 8px; transition: color 0.2s; cursor: pointer;" onmouseover="this.style.stroke='#ef4444'" onmouseout="this.style.stroke='#6b7280'" onclick="event.stopPropagation();"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>
-                                                                        </div>
+                                                                        @php
+                                                                            $fStartDate = $futureTenant->move_in_date ? $futureTenant->move_in_date->format('y.m.d') : '-';
+                                                                            $fEndDate = $futureTenant->indefinite_move_out ? '미정' : ($futureTenant->move_out_date ? $futureTenant->move_out_date->format('y.m.d') : '-');
+                                                                        @endphp
+                                                                        <div style="font-size: 12px; font-weight: 600; line-height: 1.25; color: black;">{{ $fStartDate }}~{{ $fEndDate }}</div>
                                                                     </div>
                                                                 </div>
                                                             @endforeach
@@ -525,7 +696,7 @@
                                                 <!-- 미래 입주자가 없는 경우 -->
                                                 <div
                                                     wire:click.stop="openFutureTenantModal({{ $room->id }})"
-                                                    @dragover.prevent="$event.currentTarget.style.backgroundColor='#bfdbfe'"
+                                                    @dragover.prevent="$event.currentTarget.style.backgroundColor='#e6f6f4'"
                                                     @dragleave="$event.currentTarget.style.backgroundColor=''"
                                                     @drop.prevent="
                                                         const tenantId = $event.dataTransfer.getData('tenantId');
@@ -534,10 +705,11 @@
                                                             $wire.openFutureTenantModal({{ $room->id }}, tenantId);
                                                         }
                                                     "
-                                                    style="display: flex; align-items: center; justify-content: center; height: 100%; cursor: pointer;">
-                                                    <div style="text-align: center; transition: opacity 0.2s; opacity: 1;">
-                                                        <span style="color: #6b7280; font-size: 12px;">+</span>
-                                                    </div>
+                                                    style="display: flex; align-items: center; justify-content: space-between; min-height: 48px; cursor: pointer;">
+                                                    <span style="font-size: 12px; font-weight: 700; color: #64748b;">다음 입실자 배정하기</span>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #94a3b8; transition: transform 0.2s;">
+                                                        <path d="m18 15-6-6-6 6"/>
+                                                    </svg>
                                                 </div>
                                             @endif
                                         </div>
@@ -561,11 +733,14 @@
                             </div>
                         </div>
                     @elseif($activeTab === 'schedule')
-                        <!-- 입실 관리 Content (Existing Scheduler) -->
-                        <div style="padding: 16px 24px 24px 24px; height: 100%; width: 100%; max-width: 100%; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box;">
+                        <!-- 입퇴실 일정 Content (Existing Scheduler) -->
+                        <div class="mobile-no-padding" style="padding: 16px 24px 24px 24px; height: 100%; width: 100%; max-width: 100%; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box;">
                             <div style="flex: 1; min-height: 0; width: 100%; max-width: 100%; overflow: hidden;">
                                 <!-- Tenant Scheduler Component -->
-                                <livewire:tenant-scheduler :branchId="$branchId" wire:key="tenant-scheduler-{{ $branchId }}" />
+                                <livewire:tenant-scheduler
+                                    :branchId="$branchId"
+                                    :selected-waiting-tenant-id="$selectedWaitingTenantId"
+                                    wire:key="tenant-scheduler-{{ $branchId }}" />
                             </div>
                         </div>
                     @endif
@@ -581,9 +756,62 @@
     <!-- Tenant Edit Modal Component (공통) -->
     <livewire:tenant-edit-modal wire:key="tenant-edit-modal" />
 
+    <!-- Tenant Management Modal (대기자 편집 등에서 '입주자 정보 수정' 디자인으로 통일) -->
+    <livewire:tenant-management-modal wire:key="tenant-management-modal" />
+
     <!-- All Tenants Modal Component -->
     <livewire:all-tenants-modal wire:key="all-tenants-modal" />
 
     <!-- Room Assign Modal Component -->
     <livewire:room-assign-modal wire:key="room-assign-modal" />
+
+    {{-- Removal Confirmation Modal --}}
+    @if($showRemoveConfirmation)
+        <div style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background-color: rgba(0, 0, 0, 0.5); padding: 0 20px;">
+            <div style="background-color: white; border-radius: 20px; padding: 32px 24px; width: 100%; max-width: 400px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 24px; text-align: center;">배정 취소하시겠어요?</h3>
+                <div style="display: flex; gap: 12px;">
+                    <button
+                        wire:click="cancelRemoveTenant"
+                        style="flex: 1; padding: 14px; border-radius: 12px; background-color: #f3f4f6; color: #374151; font-weight: 600; font-size: 16px; transition: background-color 0.2s; border: none; cursor: pointer;"
+                        onmouseover="this.style.backgroundColor='#e5e7eb'"
+                        onmouseout="this.style.backgroundColor='#f3f4f6'">
+                        아니오
+                    </button>
+                    <button
+                        wire:click="confirmRemoveTenant"
+                        style="flex: 1; padding: 14px; border-radius: 12px; background-color: #15B9A6; color: white; font-weight: 600; font-size: 16px; transition: background-color 0.2s; border: none; cursor: pointer;"
+                        onmouseover="this.style.backgroundColor='#129A89'"
+                        onmouseout="this.style.backgroundColor='#15B9A6'">
+                        예
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Assignment Confirmation Modal --}}
+    @if($showAssignmentConfirmation)
+        <div style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background-color: rgba(0, 0, 0, 0.5); padding: 0 20px;">
+            <div style="background-color: white; border-radius: 20px; padding: 32px 24px; width: 100%; max-width: 400px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 24px; text-align: center;">배정 진행할까요?</h3>
+                <div style="display: flex; gap: 12px;">
+                    <button
+                        wire:click="cancelPendingAssignment"
+                        style="flex: 1; padding: 14px; border-radius: 12px; background-color: #f3f4f6; color: #374151; font-weight: 600; font-size: 16px; transition: background-color 0.2s; border: none; cursor: pointer;"
+                        onmouseover="this.style.backgroundColor='#e5e7eb'"
+                        onmouseout="this.style.backgroundColor='#f3f4f6'">
+                        아니오
+                    </button>
+                    <button
+                        wire:click="processPendingAssignment"
+                        style="flex: 1; padding: 14px; border-radius: 12px; background-color: #15B9A6; color: white; font-weight: 600; font-size: 16px; transition: background-color 0.2s; border: none; cursor: pointer;"
+                        onmouseover="this.style.backgroundColor='#129A89'"
+                        onmouseout="this.style.backgroundColor='#15B9A6'">
+                        예
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 </x-filament-panels::page>

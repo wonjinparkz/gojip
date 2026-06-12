@@ -1,4 +1,39 @@
 <x-filament-panels::page>
+    <style>
+        @media (max-width: 600px) {
+            .dashboard-stats-grid {
+                grid-template-columns: 1fr !important;
+                gap: 0.5rem !important;
+            }
+            .dashboard-stats-grid > div { padding: 0.75rem !important; }
+            .dashboard-stats-grid > div p:first-child { font-size: 0.6875rem !important; }
+            .dashboard-stats-grid > div p:nth-child(2) { font-size: 1.125rem !important; }
+            .dashboard-stats-grid > div > div:last-child {
+                width: 2.25rem !important;
+                height: 2.25rem !important;
+            }
+            .dashboard-stats-grid > div > div:last-child span { font-size: 1.125rem !important; }
+
+            .dashboard-calendar-header { flex-wrap: wrap; gap: 0.5rem; }
+            .dashboard-calendar-nav {
+                position: static !important;
+                transform: none !important;
+                left: auto !important;
+                order: 2;
+                flex: 1 1 100%;
+                justify-content: center;
+            }
+
+            .dashboard-calendar-grid { gap: 0.125rem !important; padding: 0.5rem !important; }
+            .dashboard-calendar-grid > div:nth-child(n+8) { font-size: 0.6875rem; min-height: 1.75rem; }
+
+            .dashboard-modal-detail-grid {
+                grid-template-columns: 1fr !important;
+                gap: 0.5rem !important;
+            }
+            .dashboard-available-room-card { padding: 0.75rem !important; }
+        }
+    </style>
     @php
         $user = auth()->user();
         $currentBranchId = session('current_branch_id', $user->branches->first()?->id);
@@ -22,7 +57,7 @@
             </div>
         </div>
         <div style="padding: 0 0.75rem 0.75rem 0.75rem;">
-            <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem;">
+            <div class="dashboard-stats-grid" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem;">
                 <!-- 총 호실 -->
                 <div style="background-color: white; border-radius: 0.75rem; padding: 1rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);">
                     <div>
@@ -84,7 +119,7 @@
         <div style="padding: 0 0.75rem 0.75rem 0.75rem;">
             <div style="background-color: white; border-radius: 0.75rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);">
                 <!-- 캘린더 헤더 -->
-                <div style="position: relative; display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background-color: white; border-radius: 0.75rem 0.75rem 0 0;">
+                <div class="dashboard-calendar-header" style="position: relative; display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background-color: white; border-radius: 0.75rem 0.75rem 0 0;">
                     <div style="display: flex; align-items: center;">
                         <select wire:model.live="scheduleFilter" style="font-size: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; padding: 0.25rem 0.5rem; background-color: white; outline: none;">
                             <option value="all">모든 일정</option>
@@ -92,7 +127,7 @@
                             <option value="other">기타</option>
                         </select>
                     </div>
-                    <div style="position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="dashboard-calendar-nav" style="position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.5rem;">
                         <button wire:click="previousMonth" style="padding: 0.25rem; color: #6b7280; background: none; border: none; border-radius: 9999px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.color='#40c0c0'; this.style.backgroundColor='rgba(255,255,255,0.5)';" onmouseout="this.style.color='#6b7280'; this.style.backgroundColor='transparent';">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="height: 1rem; width: 1rem;">
                                 <path d="m15 18-6-6 6-6"></path>
@@ -118,7 +153,7 @@
                 <div style="border-top: 1px solid #e5e7eb;"></div>
 
                 <!-- 캘린더 그리드 -->
-                <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.25rem; padding: 0.75rem;">
+                <div class="dashboard-calendar-grid" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.25rem; padding: 0.75rem;">
                     <!-- 요일 헤더 -->
                     <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">일</div>
                     <div style="text-align: center; font-size: 0.75rem; font-weight: 500; color: #6b7280; padding: 0.5rem 0;">월</div>
@@ -598,7 +633,7 @@
                 @if($availableRoomsList && count($availableRoomsList) > 0)
                     <div style="display: grid; gap: 1rem;">
                         @foreach($availableRoomsList as $room)
-                        <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem; transition: all 0.2s;" onmouseover="this.style.borderColor='#22c55e'; this.style.backgroundColor='#f0fdf4';" onmouseout="this.style.borderColor='#e5e7eb'; this.style.backgroundColor='#f9fafb';">
+                        <div class="dashboard-available-room-card" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem; transition: all 0.2s;" onmouseover="this.style.borderColor='#22c55e'; this.style.backgroundColor='#f0fdf4';" onmouseout="this.style.borderColor='#e5e7eb'; this.style.backgroundColor='#f9fafb';">
                             <div style="display: flex; align-items: start; justify-content: space-between; gap: 1rem;">
                                 <div style="flex: 1;">
                                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
@@ -606,7 +641,7 @@
                                         <span style="background-color: #22c55e; color: white; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-weight: 500;">{{ $room->statusLabel }}</span>
                                     </div>
 
-                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
+                                    <div class="dashboard-modal-detail-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
                                         <div>
                                             <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">층수</p>
                                             <p style="font-size: 0.875rem; font-weight: 600; color: #374151; margin: 0;">{{ $room->floor }}층</p>

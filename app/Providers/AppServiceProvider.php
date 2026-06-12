@@ -11,7 +11,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        if (! defined('LINKHUB_COMM_MODE')) {
+            define('LINKHUB_COMM_MODE', 'CURL');
+        }
+
+        $this->app->singleton(\App\Services\PopbillService::class);
+        $this->app->singleton(\App\Services\AligoService::class);
     }
 
     /**
@@ -19,6 +24,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \App\Models\FloorRoom::observe(\App\Observers\FloorRoomObserver::class);
     }
 }

@@ -25,6 +25,8 @@ class TenantManagementModal extends Component
     public $payment_status = 'pending';
     public $is_blacklisted = false;
     public $blacklist_memo = '';
+    public $monthly_rent = null;
+    public $deposit = null;
     public $is_short_term = false;
     public $short_term_monthly_rent = null;
     public $short_term_deposit = null;
@@ -47,13 +49,16 @@ class TenantManagementModal extends Component
         $this->phone = $tenant->phone;
         $this->gender = $tenant->gender;
         $this->move_in_date = $tenant->move_in_date?->format('Y-m-d');
-        $this->move_out_date = $tenant->move_out_date?->format('Y-m-d');
         $this->indefinite_move_out = $tenant->indefinite_move_out ?? false;
+        // 퇴실일 미정이면 입력 필드는 비워 placeholder(----.--. --.) 표시
+        $this->move_out_date = $this->indefinite_move_out ? null : $tenant->move_out_date?->format('Y-m-d');
         $this->last_payment_date = $tenant->last_payment_date?->format('Y-m-d');
         $this->payment_method = $tenant->payment_method;
         $this->payment_status = $tenant->payment_status;
         $this->is_blacklisted = $tenant->is_blacklisted;
         $this->blacklist_memo = $tenant->blacklist_memo ?? '';
+        $this->monthly_rent = $tenant->monthly_rent;
+        $this->deposit = $tenant->deposit;
         $this->is_short_term = $tenant->is_short_term ?? false;
         $this->short_term_monthly_rent = $tenant->short_term_monthly_rent;
         $this->short_term_deposit = $tenant->short_term_deposit;
@@ -80,11 +85,9 @@ class TenantManagementModal extends Component
 
     public function updatedIndefiniteMoveOut($value)
     {
-        // 퇴실일 미정 체크박스가 체크되면 입실일 이후 날짜로 설정
+        // 퇴실일 미정 체크 시 값을 비워 placeholder(----.--. --.) 가 표시되도록 함
         if ($value) {
-            // 입실일이 미래면 입실일과 동일하게, 아니면 오늘 날짜로
-            $moveInDate = $this->move_in_date ? \Carbon\Carbon::parse($this->move_in_date) : now();
-            $this->move_out_date = $moveInDate->isFuture() ? $moveInDate->format('Y-m-d') : now()->format('Y-m-d');
+            $this->move_out_date = null;
         }
     }
 
@@ -116,10 +119,13 @@ class TenantManagementModal extends Component
             'blacklist_memo' => 'nullable|string|max:65535',
         ];
 
-        // 단기숙박인 경우 추가 검증
+        // 단기 체크 시 상단 월 입실료/보증금 필드는 비활성화(저장 값은 기존 값 유지) → 별도 검증 불필요
         if ($this->is_short_term) {
             $rules['short_term_monthly_rent'] = 'required|integer|min:0';
             $rules['short_term_deposit'] = 'nullable|integer|min:0';
+        } else {
+            $rules['monthly_rent'] = 'nullable|integer|min:0';
+            $rules['deposit'] = 'nullable|integer|min:0';
         }
 
         $this->validate($rules);
@@ -154,13 +160,15 @@ class TenantManagementModal extends Component
             'phone' => $this->phone,
             'gender' => $this->gender,
             'move_in_date' => $this->move_in_date,
-            'move_out_date' => $this->move_out_date,
+            'move_out_date' => $this->indefinite_move_out ? null : $this->move_out_date,
             'indefinite_move_out' => $this->indefinite_move_out,
             'last_payment_date' => $this->last_payment_date,
             'payment_method' => $this->payment_method,
             'payment_status' => $this->payment_status,
             'is_blacklisted' => $this->is_blacklisted,
             'blacklist_memo' => $this->blacklist_memo,
+            'monthly_rent' => $this->monthly_rent ?? 0,
+            'deposit' => $this->deposit,
             'is_short_term' => $this->is_short_term,
             'short_term_monthly_rent' => $this->is_short_term ? $this->short_term_monthly_rent : null,
             'short_term_deposit' => $this->is_short_term ? ($this->short_term_deposit ?? 0) : null,
@@ -173,6 +181,7 @@ class TenantManagementModal extends Component
 
             $this->close();
             $this->dispatch('tenant-management-saved');
+            $this->dispatch('tenant-updated');
 
             Notification::make()
                 ->success()
@@ -184,6 +193,7 @@ class TenantManagementModal extends Component
 
             $this->close();
             $this->dispatch('tenant-management-saved');
+            $this->dispatch('tenant-updated');
 
             Notification::make()
                 ->success()

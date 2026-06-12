@@ -31,11 +31,12 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->topbar(false)
             ->breadcrumbs(false)
-            ->login()
             ->colors([
                 'primary' => "#1EC3B0",
             ])
             ->maxContentWidth(Width::Full)
+            ->sidebarCollapsibleOnDesktop()
+            ->collapsedSidebarWidth('3.5rem')
             ->darkMode(false)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
@@ -66,10 +67,76 @@ class AdminPanelProvider extends PanelProvider
                         background-color: #ffffff !important;
                     }
 
-                    /* Sidebar background to white */
+                    /* Sidebar background to white + fixed */
                     .fi-sidebar {
                         background-color: #ffffff !important;
                         border-right: 1px solid #e5e7eb;
+                        position: sticky !important;
+                        top: 0 !important;
+                        height: 100vh !important;
+                        /* overflow visible so user-menu dropdown can escape when sidebar is collapsed */
+                        overflow: visible !important;
+                    }
+
+                    /* Move scrolling to the nav area only, so dropdowns in header/footer aren't clipped */
+                    .fi-sidebar-nav {
+                        overflow-y: auto !important;
+                        overflow-x: visible !important;
+                    }
+
+                    /* Lift Filament floating dropdown panels above sidebar + custom footer bar */
+                    .fi-dropdown-panel {
+                        z-index: 9999 !important;
+                    }
+
+                    /* Hide Filament default collapse buttons */
+                    .fi-sidebar-open-collapse-sidebar-btn,
+                    .fi-sidebar-close-collapse-sidebar-btn {
+                        display: none !important;
+                    }
+
+                    /* Custom sidebar collapse toggle button - right edge center */
+                    .sidebar-collapse-btn {
+                        position: fixed;
+                        top: 1.5rem;
+                        left: calc(var(--sidebar-width, 16rem) - 12px);
+                        z-index: 9999;
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 50%;
+                        background: #ffffff;
+                        border: 1px solid #d1d5db;
+                        cursor: pointer;
+                        display: none;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+                        padding: 0;
+                        color: #9ca3af;
+                    }
+
+                    .sidebar-collapse-btn:hover {
+                        background: #f3f4f6;
+                        color: #374151;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                    }
+
+                    .sidebar-collapse-btn svg {
+                        width: 14px;
+                        height: 14px;
+                        transition: transform 0.3s ease;
+                        flex-shrink: 0;
+                    }
+
+                    @media (min-width: 1024px) {
+                        .sidebar-collapse-btn {
+                            display: flex !important;
+                        }
+                    }
+                    @media (max-width: 1023px) {
+                        .sidebar-collapse-btn {
+                            display: none !important;
+                        }
                     }
 
                     .fi-sidebar-nav {
@@ -395,6 +462,81 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::BODY_END,
                 fn (): string => Blade::render(<<<'HTML'
+                <!-- Sidebar collapse toggle button -->
+                <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="사이드바 접기/펼치기">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+
+                <script>
+                    (function() {
+                        function initSidebarToggle() {
+                            const btn = document.getElementById('sidebarCollapseBtn');
+                            if (!btn) return;
+
+                            const sidebar = document.querySelector('.fi-sidebar');
+                            if (!sidebar) { setTimeout(initSidebarToggle, 300); return; }
+
+                            function positionBtn() {
+                                const rect = sidebar.getBoundingClientRect();
+                                if (rect.width > 0) {
+                                    btn.style.left = (rect.right - 12) + 'px';
+                                }
+
+                                // Arrow direction based on sidebar open class
+                                const isOpen = sidebar.classList.contains('fi-sidebar-open');
+                                const svg = btn.querySelector('svg');
+                                if (svg) {
+                                    svg.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                                }
+
+                                // Sync footer bar left edge with sidebar's actual right edge
+                                const footerBar = document.querySelector('.custom-footer-bar');
+                                if (footerBar && window.innerWidth > 768) {
+                                    footerBar.style.left = Math.max(rect.right, 0) + 'px';
+                                }
+                            }
+
+                            btn.addEventListener('click', function() {
+                                const store = window.Alpine && Alpine.store('sidebar');
+                                if (store) {
+                                    store.isOpen = !store.isOpen;
+                                }
+                                setTimeout(positionBtn, 50);
+                                setTimeout(positionBtn, 150);
+                                setTimeout(positionBtn, 300);
+                                setTimeout(positionBtn, 500);
+                            });
+
+                            // Position immediately
+                            positionBtn();
+
+                            // Observe sidebar resize
+                            try {
+                                new ResizeObserver(() => positionBtn()).observe(sidebar);
+                            } catch(e) {}
+
+                            // Observe class changes (fi-sidebar-open toggling)
+                            try {
+                                new MutationObserver(() => {
+                                    positionBtn();
+                                    setTimeout(positionBtn, 150);
+                                    setTimeout(positionBtn, 350);
+                                }).observe(sidebar, { attributes: true, attributeFilter: ['class', 'style'] });
+                            } catch(e) {}
+
+                            window.addEventListener('resize', positionBtn);
+                        }
+
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', () => setTimeout(initSidebarToggle, 200));
+                        } else {
+                            setTimeout(initSidebarToggle, 200);
+                        }
+                    })();
+                </script>
+
                 <script>
                     function toggleBranchDropdown() {
                         const dropdown = document.getElementById('branch-dropdown');

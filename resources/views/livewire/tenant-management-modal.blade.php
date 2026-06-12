@@ -104,11 +104,17 @@
                                         </label>
                                     </label>
                                     <input type="date"
+                                           x-show="!indefinite"
                                            wire:model.blur="move_out_date"
-                                           x-bind:disabled="indefinite"
                                            x-bind:style="getDateInputStyle()"
-                                           onfocus="if(!this.disabled) { this.style.outline='2px solid #2dd4bf'; this.style.borderColor='transparent'; }"
-                                           onblur="if(!this.disabled) { this.style.outline='none'; this.style.borderColor='#d1d5db'; }">
+                                           onfocus="this.style.outline='2px solid #2dd4bf'; this.style.borderColor='transparent';"
+                                           onblur="this.style.outline='none'; this.style.borderColor='#d1d5db';">
+                                    <input type="text"
+                                           x-show="indefinite"
+                                           x-cloak
+                                           value="----.--. --."
+                                           disabled
+                                           style="width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background-color: #f3f4f6; cursor: not-allowed; color: #6b7280; letter-spacing: 1px;">
                                     @error('move_out_date')
                                         <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
                                     @enderror
@@ -116,11 +122,54 @@
                             </div>
                         </div>
 
-                        <!-- 단기숙박 정보 -->
+                        <!-- 숙박 정보 -->
                         <div style="margin-bottom: 24px;">
-                            <h4 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">단기숙박 정보</h4>
+                            <h4 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb;">숙박 정보</h4>
 
-                            <!-- 단기숙박 체크박스 -->
+                            <!-- 월 입실료 / 보증금 (단기 체크 시 비활성화) -->
+                            <div class="tenant-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                                <div x-data="currencyInput('monthly_rent')">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">월 입실료</label>
+                                    <div style="position: relative;">
+                                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 14px;">₩</span>
+                                        <input type="text"
+                                               x-model="displayValue"
+                                               @input="handleInput($event)"
+                                               x-bind:disabled="$wire.is_short_term"
+                                               x-bind:style="$wire.is_short_term
+                                                    ? 'width: 100%; padding: 12px 16px 12px 28px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background-color: #f3f4f6; cursor: not-allowed; color: #9ca3af;'
+                                                    : 'width: 100%; padding: 12px 16px 12px 28px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;'"
+                                               placeholder="예: 500,000"
+                                               onfocus="if(!this.disabled) { this.style.outline='2px solid #2dd4bf'; this.style.borderColor='transparent'; }"
+                                               onblur="if(!this.disabled) { this.style.outline='none'; this.style.borderColor='#d1d5db'; }">
+                                    </div>
+                                    @error('monthly_rent')
+                                        <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
+                                    @enderror
+                                </div>
+
+                                <div x-data="currencyInput('deposit')">
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">보증금</label>
+                                    <div style="position: relative;">
+                                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 14px;">₩</span>
+                                        <input type="text"
+                                               x-model="displayValue"
+                                               @input="handleInput($event)"
+                                               x-bind:disabled="$wire.is_short_term"
+                                               x-bind:style="$wire.is_short_term
+                                                    ? 'width: 100%; padding: 12px 16px 12px 28px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background-color: #f3f4f6; cursor: not-allowed; color: #9ca3af;'
+                                                    : 'width: 100%; padding: 12px 16px 12px 28px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;'"
+                                               placeholder="예: 500,000"
+                                               onfocus="if(!this.disabled) { this.style.outline='2px solid #2dd4bf'; this.style.borderColor='transparent'; }"
+                                               onblur="if(!this.disabled) { this.style.outline='none'; this.style.borderColor='#d1d5db'; }">
+                                    </div>
+                                    @error('deposit')
+                                        <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <!-- 단기 숙박 체크박스 -->
                             <div style="margin-bottom: 16px;">
                                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                                     <input type="checkbox" wire:model.live="is_short_term" style="width: 16px; height: 16px; cursor: pointer; accent-color: #2dd4bf;">
@@ -131,9 +180,9 @@
 
                             @if($is_short_term)
                             <div class="tenant-form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                                <!-- 단기 숙박 월세 -->
+                                <!-- 단기 숙박 월 입실료 -->
                                 <div x-data="currencyInput('short_term_monthly_rent')">
-                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">단기 숙박 월세 *</label>
+                                    <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">단기 숙박 월 입실료 *</label>
                                     <div style="position: relative;">
                                         <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 14px;">₩</span>
                                         <input type="text"
@@ -280,7 +329,7 @@ document.addEventListener('livewire:init', () => {
                 // indefinite 값 변경 감시
                 this.$watch('indefinite', value => {
                     if (value) {
-                        this.updateMoveOutDate();
+                        this.clearMoveOutDate();
                     }
                 });
 
@@ -291,20 +340,12 @@ document.addEventListener('livewire:init', () => {
                     });
                 }
             },
-            updateMoveOutDate() {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                const day = String(today.getDate()).padStart(2, '0');
-                const dateString = `${year}-${month}-${day}`;
+            clearMoveOutDate() {
                 if (this.$wire && moveOutDateProperty) {
-                    this.$wire.set(moveOutDateProperty, dateString);
+                    this.$wire.set(moveOutDateProperty, null);
                 }
             },
             getDateInputStyle() {
-                if (this.indefinite) {
-                    return 'width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background-color: #f3f4f6; cursor: not-allowed;';
-                }
                 return 'width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;';
             }
         }));

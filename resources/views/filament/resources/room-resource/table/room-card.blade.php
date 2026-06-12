@@ -28,37 +28,47 @@
     wire:click="mountTableAction('view', '{{ $getRecord()->getKey() }}')"
 >
     <!-- Card Header -->
-    <div class="mb-3">
-        <div class="flex items-center gap-2 mb-1">
-            <h3 class="text-lg font-bold text-gray-900">{{ $getRecord()->room_number }}</h3>
-
-            {{-- 디버그 정보 표시 --}}
-            @if($getRecord()->room_number == '301')
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                    DEBUG: {{ $currentTenant ? 'T:' . $currentTenant->name . ' ST:' . ($currentTenant->is_short_term ? 'Y' : 'N') : 'NO_TENANT' }}
-                </span>
-            @endif
-
-            @if($getRecord()->status === 'occupied')
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800">
-                    입주중
-                </span>
-                @if($currentTenant && $currentTenant->is_short_term)
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                        단기숙박
-                    </span>
-                @endif
-            @elseif($getRecord()->status === 'available')
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                    입주가능
-                </span>
-            @else
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                    수리중
-                </span>
-            @endif
+    <div class="flex justify-between items-start mb-2">
+        <div class="flex flex-col">
+            <h3 class="font-bold text-lg text-gray-800">{{ $getRecord()->room_number }}호</h3>
+            <span class="text-sm text-gray-500">{{ $getRecord()->room_type }}</span>
         </div>
-        <p class="text-sm text-gray-600">{{ $getRecord()->room_type }}</p>
+        <div class="flex items-center gap-2">
+            @php
+                $statusColors = [
+                    'available' => 'bg-green-100 text-green-800',
+                    'occupied' => 'bg-blue-100 text-blue-800',
+                    'maintenance' => 'bg-red-100 text-red-800',
+                ];
+                $statusLabels = [
+                    'available' => '입주가능',
+                    'occupied' => '입주중',
+                    'maintenance' => '수리중',
+                ];
+            @endphp
+            <span class="px-2 py-1 rounded-full text-xs font-medium {{ $statusColors[$getRecord()->status] ?? 'bg-gray-100 text-gray-800' }}">
+                {{ $statusLabels[$getRecord()->status] ?? '알 수 없음' }}
+            </span>
+            <button
+                type="button"
+                wire:click.stop="mountTableAction('delete', '{{ $getRecord()->key }}')"
+                class="flex items-center justify-center w-7 h-7 bg-red-100/80 hover:bg-red-200 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 z-10"
+                title="호실 삭제"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-red-600">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                </svg>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Badges Row -->
+    <div class="flex items-center gap-2 mb-3">
+        @if($currentTenant && $currentTenant->is_short_term)
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                단기숙박
+            </span>
+        @endif
     </div>
 
     <!-- Card Body -->

@@ -35,11 +35,11 @@ class LoginResponse implements LoginResponseContract
             return redirect()->intended('/admin');
         }
 
-        // If onboarding is not completed and no data exists, redirect to onboarding
-        if (!$user->onboarding_completed) {
-            return redirect()->route('onboarding');
+        // If no branches or rooms exist, reset onboarding status and redirect to onboarding
+        if ($user->onboarding_completed) {
+            $user->update(['onboarding_completed' => false]);
         }
 
-        return redirect()->intended('/admin');
+        return redirect()->route('onboarding');
     }
 }

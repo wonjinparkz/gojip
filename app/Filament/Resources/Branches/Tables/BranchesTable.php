@@ -22,6 +22,13 @@ class BranchesTable
                     ->label('주소')
                     ->searchable()
                     ->limit(30),
+                TextColumn::make('business_number')
+                    ->label('사업자번호')
+                    ->searchable()
+                    ->formatStateUsing(fn ($state) => $state
+                        ? preg_replace('/^(\d{3})(\d{2})(\d{5})$/', '$1-$2-$3', $state)
+                        : '-')
+                    ->toggleable(),
                 TextColumn::make('phone')
                     ->label('전화번호')
                     ->searchable()
@@ -35,6 +42,12 @@ class BranchesTable
                 TextColumn::make('rooms_count')
                     ->label('호실 수')
                     ->counts('rooms')
+                    ->sortable(),
+                TextColumn::make('start_floor')
+                    ->label('시작 층수')
+                    ->sortable(),
+                TextColumn::make('end_floor')
+                    ->label('종료 층수')
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->label('생성일')

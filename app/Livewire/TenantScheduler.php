@@ -17,7 +17,9 @@ class TenantScheduler extends Component
     public $days = [];
     public $rooms = [];
     public $tenants = [];
+    public $tenantsByRoom = []; // 호실별 입주자 그룹화 (Rendering 최적화)
     public $branchId = null;
+    public $selectedWaitingTenantId = null;
 
     #[On('tenant-created')]
     #[On('tenant-updated')]
@@ -36,9 +38,9 @@ class TenantScheduler extends Component
         $this->currentYear = $today->year;
         $this->currentMonth = $today->month;
 
-        // 초기 범위: 오늘 기준 ±365일 (약 1년)
-        $this->startDate = $today->copy()->subDays(365)->format('Y-m-d');
-        $this->endDate = $today->copy()->addDays(365)->format('Y-m-d');
+        // 초기 범위: 오늘 기준 ±45일 (약 3개월) - 메모리 최적화
+        $this->startDate = $today->copy()->subDays(45)->format('Y-m-d');
+        $this->endDate = $today->copy()->addDays(45)->format('Y-m-d');
 
         $this->loadData();
     }
@@ -176,8 +178,11 @@ class TenantScheduler extends Component
             })
             ->toArray();
 
+        // 호실별로 그룹화하여 View에서 루프 성능 최적화
+        $this->tenantsByRoom = collect($this->tenants)->groupBy('room_id')->toArray();
+
         \Log::info('매핑된 입주자 배열 수: ' . count($this->tenants));
-        \Log::info('입주자 데이터: ' . json_encode($this->tenants, JSON_UNESCAPED_UNICODE));
+        // \Log::info('입주자 데이터: ' . json_encode($this->tenants, JSON_UNESCAPED_UNICODE));
     }
 
     public function previousMonth()
@@ -203,9 +208,9 @@ class TenantScheduler extends Component
         $this->currentYear = $today->year;
         $this->currentMonth = $today->month;
         
-        // 오늘 기준 ±365일 범위 재설정
-        $this->startDate = $today->copy()->subDays(365)->format('Y-m-d');
-        $this->endDate = $today->copy()->addDays(365)->format('Y-m-d');
+        // 오늘 기준 ±45일 범위 재설정 - 메모리 최적화
+        $this->startDate = $today->copy()->subDays(45)->format('Y-m-d');
+        $this->endDate = $today->copy()->addDays(45)->format('Y-m-d');
         
         $this->loadData();
         

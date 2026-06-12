@@ -27,7 +27,7 @@ class BranchResource extends Resource
 
     protected static ?string $pluralModelLabel = '지점 관리';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 8;
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -47,7 +47,7 @@ class BranchResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            \App\Filament\Resources\Branches\RelationManagers\FloorRoomsRelationManager::class,
         ];
     }
 

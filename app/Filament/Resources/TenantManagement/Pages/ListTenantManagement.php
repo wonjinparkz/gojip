@@ -14,6 +14,7 @@ use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Enums\Width;
+use Livewire\Attributes\On;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ListTenantManagement extends ListRecords
@@ -21,6 +22,212 @@ class ListTenantManagement extends ListRecords
     protected static string $resource = TenantManagementResource::class;
 
     protected string $view = 'filament.resources.tenant-management.pages.list-tenant-management';
+
+    public array $expandedCards = [];
+
+    #[On('complete-checkout-confirm')]
+    public function confirmCheckout(int $tenantId): void
+    {
+        $this->completeCheckout($tenantId);
+    }
+
+    // 모바일 검색/필터
+    public string $mobileSearch = '';
+    public string $mobileFilterStatus = '';
+    public string $mobileFilterGender = '';
+    public string $mobileFilterRoomType = '';
+    public string $mobileFilterWindowStructure = '';
+    public string $mobileFilterRoomCategory = '';
+    public ?int $mobileFilterMonthlyRentFrom = null;
+    public ?int $mobileFilterMonthlyRentTo = null;
+    public string $mobileFilterPaymentStatus = '';
+    public string $mobileFilterBlacklist = '';
+    public bool $showMobileFilters = false;
+
+    public function toggleMobileFilters(): void
+    {
+        $this->showMobileFilters = !$this->showMobileFilters;
+    }
+
+    public function resetMobileFilters(): void
+    {
+        $this->mobileSearch = '';
+        $this->mobileFilterStatus = '';
+        $this->mobileFilterGender = '';
+        $this->mobileFilterRoomType = '';
+        $this->mobileFilterWindowStructure = '';
+        $this->mobileFilterRoomCategory = '';
+        $this->mobileFilterMonthlyRentFrom = null;
+        $this->mobileFilterMonthlyRentTo = null;
+        $this->mobileFilterPaymentStatus = '';
+        $this->mobileFilterBlacklist = '';
+    }
+
+    public function getActiveFilterCount(): int
+    {
+        $count = 0;
+        if ($this->mobileFilterStatus) $count++;
+        if ($this->mobileFilterGender) $count++;
+        if ($this->mobileFilterRoomType) $count++;
+        if ($this->mobileFilterWindowStructure) $count++;
+        if ($this->mobileFilterRoomCategory) $count++;
+        if ($this->mobileFilterMonthlyRentFrom) $count++;
+        if ($this->mobileFilterMonthlyRentTo) $count++;
+        if ($this->mobileFilterPaymentStatus) $count++;
+        if ($this->mobileFilterBlacklist) $count++;
+        return $count;
+    }
+
+    public function toggleCard(int $tenantId): void
+    {
+        if (in_array($tenantId, $this->expandedCards)) {
+            $this->expandedCards = array_filter($this->expandedCards, fn($id) => $id !== $tenantId);
+        } else {
+            $this->expandedCards[] = $tenantId;
+        }
+    }
+
+    /**
+     * 퇴실 완료 처리
+     */
+    public function completeCheckout(int $tenantId): void
+    {
+        $tenant = Tenant::with('room')->find($tenantId);
+
+        if (!$tenant || !$tenant->room) {
+            Notification::make()
+                ->title('입주자 정보를 찾을 수 없습니다')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        // Room의 퇴실 완료 처리
+        $tenant->room->update([
+            'check_out_completed_at' => now(),
+            'cleaning_status' => 'waiting',
+        ]);
+
+        Notification::make()
+            ->title('퇴실 완료 처리되었습니다')
+            ->success()
+            ->send();
+    }
+
+    public function getTenants()
+    {
+        $branchId = session('current_branch_id');
+
+        $query = Tenant::with('room')
+            ->whereHas('branch', function ($query) {
+                $query->where('user_id', auth()->id());
+            });
+
+        if ($branchId) {
+            $query->where('branch_id', $branchId);
+        }
+
+        // 모바일 검색 적용
+        if ($this->mobileSearch) {
+            $search = $this->mobileSearch;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        // 입주 상태 필터
+        if ($this->mobileFilterStatus) {
+            $status = $this->mobileFilterStatus;
+            switch ($status) {
+                case 'checked_in':
+                    $query->whereNotNull('room_id')
+                        ->whereHas('room', function ($q) {
+                            $q->whereNotNull('check_in_completed_at')
+                              ->whereNull('check_out_completed_at')
+                              ->whereNull('cleaning_status');
+                        });
+                    break;
+                case 'checked_out':
+                    $query->whereNotNull('room_id')
+                        ->whereHas('room', function ($q) {
+                            $q->where(function ($q2) {
+                                $q2->whereNotNull('check_out_completed_at')
+                                   ->orWhereIn('cleaning_status', ['waiting', 'completed']);
+                            });
+                        });
+                    break;
+                case 'scheduled':
+                    $query->whereNotNull('room_id')
+                        ->whereHas('room', function ($q) {
+                            $today = now()->format('Y-m-d');
+                            $q->whereNotNull('move_in_date')
+                              ->whereDate('move_in_date', '>=', $today)
+                              ->whereNull('check_in_completed_at')
+                              ->whereNull('check_out_completed_at')
+                              ->whereNull('cleaning_status');
+                        });
+                    break;
+                case 'pending':
+                    $query->whereNull('room_id');
+                    break;
+            }
+        }
+
+        // 성별 필터
+        if ($this->mobileFilterGender) {
+            $query->where('gender', $this->mobileFilterGender);
+        }
+
+        // 호실 유형 필터
+        if ($this->mobileFilterRoomType) {
+            $query->whereHas('room', function ($q) {
+                $q->where('room_type', $this->mobileFilterRoomType);
+            });
+        }
+
+        // 창 구조 필터
+        if ($this->mobileFilterWindowStructure) {
+            $query->whereHas('room', function ($q) {
+                $q->where('window_structure', $this->mobileFilterWindowStructure);
+            });
+        }
+
+        // 호실 타입 필터
+        if ($this->mobileFilterRoomCategory) {
+            $query->whereHas('room', function ($q) {
+                $q->where('room_category', $this->mobileFilterRoomCategory);
+            });
+        }
+
+        // 월 입실료 필터
+        if ($this->mobileFilterMonthlyRentFrom) {
+            $query->whereHas('room', function ($q) {
+                $q->where('monthly_rent', '>=', $this->mobileFilterMonthlyRentFrom);
+            });
+        }
+        if ($this->mobileFilterMonthlyRentTo) {
+            $query->whereHas('room', function ($q) {
+                $q->where('monthly_rent', '<=', $this->mobileFilterMonthlyRentTo);
+            });
+        }
+
+        // 납부 상태 필터
+        if ($this->mobileFilterPaymentStatus) {
+            $query->where('payment_status', $this->mobileFilterPaymentStatus);
+        }
+
+        // 블랙리스트 필터
+        if ($this->mobileFilterBlacklist !== '') {
+            if ($this->mobileFilterBlacklist === '1') {
+                $query->where('is_blacklisted', true);
+            } elseif ($this->mobileFilterBlacklist === '0') {
+                $query->where('is_blacklisted', false);
+            }
+        }
+
+        return $query->orderBy('created_at', 'desc')->get();
+    }
 
     public function getHeading(): string
     {

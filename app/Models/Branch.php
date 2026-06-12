@@ -17,6 +17,11 @@ class Branch extends Model
         'name',
         'address',
         'phone',
+        'business_number',
+        'ceo_name',
+        'business_address',
+        'business_type',
+        'business_class',
         'start_floor',
         'end_floor',
     ];

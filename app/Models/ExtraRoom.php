@@ -13,6 +13,9 @@ class ExtraRoom extends Model
     protected $fillable = [
         'branch_id',
         'room_type',
+        'room_category',
+        'window_structure',
+        'gender',
         'monthly_rent',
         'room_count',
     ];

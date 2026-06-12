@@ -147,13 +147,20 @@
                             @endif
                         </label>
                         <input type="date"
+                               x-show="!indefinite"
                                wire:model.blur="moveOutDate"
                                {{ $datesReadOnly ? 'readonly' : '' }}
                                @if($moveInDate) min="{{ $moveInDate }}" @endif
-                               x-bind:disabled="indefinite || {{ $datesReadOnly ? 'true' : 'false' }}"
+                               x-bind:disabled="{{ $datesReadOnly ? 'true' : 'false' }}"
                                x-bind:style="getDateInputStyle({{ $datesReadOnly ? 'true' : 'false' }})"
                                onfocus="if(!this.disabled) { this.style.outline='2px solid #2dd4bf'; this.style.borderColor='transparent'; }"
                                onblur="if(!this.disabled) { this.style.outline='none'; this.style.borderColor='#d1d5db'; }">
+                        <input type="text"
+                               x-show="indefinite"
+                               x-cloak
+                               value="----.--. --."
+                               disabled
+                               style="width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background-color: #f3f4f6; cursor: not-allowed; color: #6b7280; letter-spacing: 1px;">
                         @error('moveOutDate')
                             <span style="font-size: 12px; color: #ef4444; margin-top: 4px; display: block;">{{ $message }}</span>
                         @enderror
@@ -251,7 +258,7 @@ document.addEventListener('livewire:init', () => {
                 // indefinite 값 변경 감시
                 this.$watch('indefinite', value => {
                     if (value) {
-                        this.updateMoveOutDate();
+                        this.clearMoveOutDate();
                     }
                 });
 
@@ -262,18 +269,13 @@ document.addEventListener('livewire:init', () => {
                     });
                 }
             },
-            updateMoveOutDate() {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                const day = String(today.getDate()).padStart(2, '0');
-                const dateString = `${year}-${month}-${day}`;
+            clearMoveOutDate() {
                 if (this.$wire && moveOutDateProperty) {
-                    this.$wire.set(moveOutDateProperty, dateString);
+                    this.$wire.set(moveOutDateProperty, null);
                 }
             },
             getDateInputStyle(isReadOnly = false) {
-                if (this.indefinite || isReadOnly) {
+                if (isReadOnly) {
                     return 'width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background-color: #f3f4f6; cursor: not-allowed;';
                 }
                 return 'width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;';

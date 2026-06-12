@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Tenant extends Model
 {
@@ -20,8 +21,11 @@ class Tenant extends Model
         'room_number',
         'room_type',
         'monthly_rent',
+        'deposit',
         'move_in_date',
         'last_payment_date',
+        'payment_due_day',
+        'actual_payment_date',
         'payment_method',
         'payment_status',
         'move_out_date',
@@ -32,11 +36,19 @@ class Tenant extends Model
         'is_short_term',
         'short_term_monthly_rent',
         'short_term_deposit',
+        'business_number',
+        'corp_name',
+        'corp_ceo_name',
+        'corp_address',
+        'corp_business_type',
+        'corp_business_class',
+        'email',
     ];
 
     protected $casts = [
         'move_in_date' => 'date',
         'last_payment_date' => 'date',
+        'actual_payment_date' => 'date',
         'move_out_date' => 'date',
         'indefinite_move_out' => 'boolean',
         'is_blacklisted' => 'boolean',
@@ -56,6 +68,16 @@ class Tenant extends Model
     public function room(): BelongsTo
     {
         return $this->belongsTo(Room::class);
+    }
+
+    public function cashReceipts(): HasMany
+    {
+        return $this->hasMany(CashReceipt::class);
+    }
+
+    public function latestCashReceipt()
+    {
+        return $this->hasOne(CashReceipt::class)->latestOfMany();
     }
 
     public function getPaymentStatusLabelAttribute(): string
@@ -150,6 +172,50 @@ class Tenant extends Model
             'scheduled' => 'warning',
             'pending' => 'gray',
             default => 'gray',
+        };
+    }
+
+    /**
+     * 수납 관리 정렬을 위한 우선순위 값
+     * 입실자(1) > 입실예정(2) > 퇴실자(3) > 대기(4)
+     */
+    public function getProcessStatusPriorityAttribute(): int
+    {
+        return match($this->process_status) {
+            'checked_in' => 1,
+            'scheduled' => 2,
+            'checked_out' => 3,
+            'pending' => 4,
+            default => 5,
+        };
+    }
+
+    /**
+     * 결제 예정일 계산 (현재 월 기준)
+     */
+    public function getPaymentDueDateAttribute(): ?string
+    {
+        if (!$this->payment_due_day) {
+            return null;
+        }
+
+        $year = now()->year;
+        $month = now()->month;
+        $day = min($this->payment_due_day, cal_days_in_month(CAL_GREGORIAN, $month, $year));
+
+        return sprintf('%04d-%02d-%02d', $year, $month, $day);
+    }
+
+    /**
+     * 결제 방법 라벨
+     */
+    public function getPaymentMethodLabelAttribute(): string
+    {
+        return match($this->payment_method) {
+            'card' => '카드',
+            'transfer' => '계좌이체',
+            'cash' => '현금',
+            default => $this->payment_method ?? '-',
         };
     }
 }

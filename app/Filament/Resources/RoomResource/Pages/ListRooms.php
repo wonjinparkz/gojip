@@ -118,7 +118,7 @@ class ListRooms extends Page implements HasForms
                             ])
                             ->dehydrateStateUsing(fn ($state) => $state ? (int) str_replace(',', '', $state) : 0),
                     ])
-                    ->action(function (array $data) {
+                    ->action(function (array $data, Action $action) {
                         $branchId = session('current_branch_id', $this->selectedBranchId);
 
                         if (!$branchId) {
@@ -126,6 +126,22 @@ class ListRooms extends Page implements HasForms
                                 ->title('지점을 선택해주세요')
                                 ->danger()
                                 ->send();
+                            return;
+                        }
+
+                        // Check if room already exists with same room_type
+                        $exists = Room::where('branch_id', $branchId)
+                            ->where('room_number', $data['room_number'])
+                            ->where('room_type', $data['room_type'])
+                            ->exists();
+
+                        if ($exists) {
+                            Notification::make()
+                                ->title('중복된 호실 번호입니다. 해당 호실 번호와 타입이 이미 존재합니다')
+                                ->warning()
+                                ->send();
+                            
+                            $action->halt();
                             return;
                         }
 
@@ -144,10 +160,12 @@ class ListRooms extends Page implements HasForms
                             ->success()
                             ->send();
                     })
-                    ->modalWidth(Width::Large),
+                    ->modalWidth(Width::Large)
+                    ->modalSubmitActionLabel('추가'),
                 Action::make('createMultiple')
                     ->label('호실 여러 개 추가하기')
                     ->icon('heroicon-o-plus-circle')
+
                     ->form([
                         Forms\Components\TextInput::make('start_floor')
                             ->label('시작 층')
@@ -166,6 +184,13 @@ class ListRooms extends Page implements HasForms
                             ->numeric()
                             ->default(10)
                             ->placeholder('예: 10'),
+                        Forms\Components\TextInput::make('start_room_number')
+                            ->label('시작 호실 번호 (뒷자리)')
+                            ->helperText('예: 1 입력 시 201호부터 시작, 6 입력 시 206호부터 시작')
+                            ->required()
+                            ->numeric()
+                            ->default(1)
+                            ->placeholder('예: 1'),
                         Forms\Components\TextInput::make('room_type')
                             ->label('방 유형')
                             ->required()
@@ -204,6 +229,7 @@ class ListRooms extends Page implements HasForms
                         $startFloor = (int) $data['start_floor'];
                         $endFloor = (int) $data['end_floor'];
                         $roomsPerFloor = (int) $data['rooms_per_floor'];
+                        $startRoomNum = (int) $data['start_room_number'];
 
                         if ($startFloor > $endFloor) {
                             Notification::make()
@@ -216,12 +242,16 @@ class ListRooms extends Page implements HasForms
                         $createdCount = 0;
                         $skippedCount = 0;
                         for ($floor = $startFloor; $floor <= $endFloor; $floor++) {
-                            for ($roomNum = 1; $roomNum <= $roomsPerFloor; $roomNum++) {
-                                $roomNumber = $floor . str_pad($roomNum, 2, '0', STR_PAD_LEFT);
+                            // $roomNum represents the iterator, but we want the actual number to start from $startRoomNum
+                            // So we iterate $roomsPerFloor times.
+                            for ($i = 0; $i < $roomsPerFloor; $i++) {
+                                $currentRoomNum = $startRoomNum + $i;
+                                $roomNumber = $floor . str_pad($currentRoomNum, 2, '0', STR_PAD_LEFT);
 
-                                // Check if room already exists
+                                // Check if room already exists with same room_type
                                 $exists = Room::where('branch_id', $branchId)
                                     ->where('room_number', $roomNumber)
+                                    ->where('room_type', $data['room_type'])
                                     ->exists();
 
                                 if ($exists) {
@@ -252,7 +282,8 @@ class ListRooms extends Page implements HasForms
                             ->success()
                             ->send();
                     })
-                    ->modalWidth(Width::Large),
+                    ->modalWidth(Width::Large)
+                    ->modalSubmitActionLabel('추가'),
             ])
                 ->label('방 추가하기')
                 ->icon('heroicon-o-plus')
@@ -457,5 +488,29 @@ class ListRooms extends Page implements HasForms
         $this->editDeposit = null;
         $this->editRoomType = null;
         $this->editStatus = null;
+    }
+
+    public function delete(): Action
+    {
+        return Action::make('delete')
+            ->label('삭제')
+            ->requiresConfirmation()
+            ->modalHeading('호실 삭제 확인')
+            ->modalDescription(new \Illuminate\Support\HtmlString('정말로 해당 호실을 삭제하시겠어요?<br>삭제 후에는 되돌릴 수 없어요.'))
+            ->modalSubmitAction(fn (\Filament\Actions\Action $action) => $action->label('예')->extraAttributes(['style' => 'background-color: #ef4444 !important; color: white !important; border: none !important;']))
+            ->modalCancelAction(fn (\Filament\Actions\Action $action) => $action->label('아니오')->extraAttributes(['style' => 'background-color: white !important; border: 1px solid #d1d5db !important; color: #374151 !important;']))
+            ->color('danger')
+            ->action(function (array $arguments) {
+                if (isset($arguments['record'])) {
+                    $room = Room::find($arguments['record']);
+                    if ($room) {
+                        $room->delete();
+                        Notification::make()
+                            ->title('호실이 삭제되었습니다')
+                            ->success()
+                            ->send();
+                    }
+                }
+            });
     }
 }

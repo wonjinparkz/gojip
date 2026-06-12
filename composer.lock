@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e06f7bce190e66989dc0debd9c674a41",
+    "content-hash": "22c898f784e153136f067ed2a65d1aff",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -3888,6 +3888,98 @@
                 }
             ],
             "time": "2024-12-08T08:18:47+00:00"
+        },
+        {
+            "name": "linkhub/linkhub",
+            "version": "1.5.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/linkhub-sdk/linkhub.auth.php7.git",
+                "reference": "46f044d693d1c7e7ea04a6c36f217102def7f541"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/linkhub-sdk/linkhub.auth.php7/zipball/46f044d693d1c7e7ea04a6c36f217102def7f541",
+                "reference": "46f044d693d1c7e7ea04a6c36f217102def7f541",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.0.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Linkhub\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Linkhub Corp",
+                    "email": "code@linkhub.co.kr",
+                    "homepage": "https://github.com/linkhub-sdk/",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Linkhub Authority SDK for php7",
+            "homepage": "https://www.linkhub.co.kr",
+            "keywords": [
+                "linkhub",
+                "popbill"
+            ],
+            "support": {
+                "email": "code@linkhub.co.kr",
+                "issues": "https://github.com/linkhub-sdk/linkhub.auth.php7/issues",
+                "source": "https://github.com/linkhub-sdk/linkhub.auth.php7"
+            },
+            "time": "2024-10-15T01:12:09+00:00"
+        },
+        {
+            "name": "linkhub/popbill",
+            "version": "1.68.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/linkhub-sdk/popbill.sdk.php7.git",
+                "reference": "3a5582a93c8872d3fd1a32cfaa10df8501f91bf7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/linkhub-sdk/popbill.sdk.php7/zipball/3a5582a93c8872d3fd1a32cfaa10df8501f91bf7",
+                "reference": "3a5582a93c8872d3fd1a32cfaa10df8501f91bf7",
+                "shasum": ""
+            },
+            "require": {
+                "linkhub/linkhub": "1.5.3",
+                "php": ">=7.1.3"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.6"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Linkhub\\Popbill\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Popbill SDK for php7",
+            "homepage": "https://www.linkhub.co.kr/",
+            "keywords": [
+                "linkhub",
+                "popbill"
+            ],
+            "support": {
+                "email": "ops@linkhubcorp.com",
+                "issues": "https://github.com/linkhub-sdk/linkhub.auth.php7/issues",
+                "source": "https://github.com/linkhub-sdk/linkhub.auth.php7"
+            },
+            "time": "2026-04-08T00:18:41+00:00"
         },
         {
             "name": "livewire/livewire",
@@ -13852,5 +13944,5 @@
         "php": "^8.2"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }

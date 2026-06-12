@@ -30,6 +30,10 @@ class ListTenants extends Page
     public $roomFilter = 'all'; // all, occupied, vacant
     public $waitingFilter = 'all'; // all, short_term, long_term
     public $selectedWaitingTenantId = null;
+    
+    // 모바일 배정용 선택 상태
+    public $selectedScheduleRoomId = null;
+    public $selectedScheduleDate = null;
 
     public function mount(): void
     {
@@ -185,11 +189,11 @@ class ListTenants extends Page
     }
 
     /**
-     * 대기자 수정 모달 열기 (호실 정보 없이)
+     * 대기자 수정 모달 열기 — '입주자 정보 수정' 디자인(TenantManagementModal)으로 통일
      */
     public function editWaitingTenant($tenantId)
     {
-        $this->dispatch('open-tenant-edit-modal', tenantId: $tenantId);
+        $this->dispatch('edit-tenant-management', tenantId: $tenantId);
     }
 
     /**
@@ -203,7 +207,7 @@ class ListTenants extends Page
     /**
      * 대기자 카드 선택/해제
      */
-    public function selectWaitingTenant($tenantId)
+    public function selectWaitingTenant($tenantId, $targetTab = null)
     {
         if ($this->selectedWaitingTenantId === $tenantId) {
             // 이미 선택된 경우 해제
@@ -211,9 +215,55 @@ class ListTenants extends Page
         } else {
             // 새로 선택
             $this->selectedWaitingTenantId = $tenantId;
-            // 호실 현황 탭으로 자동 전환
-            $this->activeTab = 'rooms';
+            
+            // 모바일 배정 모드인지 확인 (호실과 날짜가 선택된 상태)
+            if ($this->selectedScheduleRoomId && $this->selectedScheduleDate) {
+                // 호실 배정 확인 준비
+                $this->prepareAssignmentConfirmation();
+            } else {
+                // targetTab이 지정된 경우 해당 탭으로 전환 (또는 유지)
+                if ($targetTab === 'schedule') {
+                    $this->activeTab = 'schedule';
+                    
+                    // 모바일에서 대기자 선택 후 날짜 선택을 유도하기 위한 알림
+                    Notification::make()
+                        ->title('배정할 날짜를 선택해주세요')
+                        ->info()
+                        ->duration(3000)
+                        ->send();
+                } else {
+                    // 기본 동작: 호실 현황 탭으로 자동 전환
+                    $this->activeTab = 'rooms';
+                }
+            }
         }
+    }
+    
+    /**
+     * 모바일 스케줄러 셀 클릭 핸들러
+     */
+    public function handleScheduleCellClicked($roomId, $date)
+    {
+        $this->selectedScheduleRoomId = $roomId;
+        $this->selectedScheduleDate = $date;
+        
+        // 대기자가 이미 선택된 상태라면 바로 배정 확인
+        if ($this->selectedWaitingTenantId) {
+            $this->prepareAssignmentConfirmation();
+        }
+    }
+    
+    /**
+     * 모바일 배정 확인 준비
+     */
+    public function prepareAssignmentConfirmation()
+    {
+        if (!$this->selectedScheduleRoomId || !$this->selectedWaitingTenantId) {
+            return;
+        }
+        
+        $this->pendingAssignmentRoomId = $this->selectedScheduleRoomId;
+        $this->showAssignmentConfirmation = true;
     }
 
     /**
@@ -280,6 +330,81 @@ class ListTenants extends Page
     /**
      * 입주자를 호실에 바로 배정 (퇴실일 미정인 경우)
      */
+    public function handleRoomClick($roomId)
+    {
+        // 1. 대기자가 선택되어 있는지 확인
+        if (!$this->selectedWaitingTenantId) {
+            return;
+        }
+
+        // 2. 해당 호실이 배정 가능한지 확인 (기존 로직 재사용)
+        if (!$this->isRoomAvailableForSelectedTenant($roomId)) {
+            Notification::make()
+                ->danger()
+                ->title('배정 불가')
+                ->body('해당 호실에는 이미 입주자가 배정되어 있거나 입실 조건이 맞지 않습니다.')
+                ->send();
+            return;
+        }
+
+        // 3. 배정 확인 모달 표시
+        $this->pendingAssignmentRoomId = $roomId;
+        $this->showAssignmentConfirmation = true;
+    }
+
+    public function processPendingAssignment()
+    {
+        if (!$this->pendingAssignmentRoomId || !$this->selectedWaitingTenantId) {
+            $this->cancelPendingAssignment();
+            return;
+        }
+
+        $tenant = Tenant::find($this->selectedWaitingTenantId);
+        $room = Room::find($this->pendingAssignmentRoomId);
+
+        if (!$tenant || !$room) {
+             Notification::make()
+                ->danger()
+                ->title('오류 발생')
+                ->body('입주자 또는 호실 정보를 찾을 수 없습니다.')
+                ->send();
+            $this->cancelPendingAssignment();
+            return;
+        }
+
+        // 입실일과 퇴실일 결정
+        // 모바일 배정의 경우 선택된 날짜를 우선 사용
+        $startDate = ($this->selectedScheduleDate) 
+            ? $this->selectedScheduleDate 
+            : ($tenant->move_in_date ? $tenant->move_in_date->format('Y-m-d') : now()->format('Y-m-d'));
+        
+        // 퇴실일이 없으면 입실일과 동일하게 설정 (assignTenantDirectly 로직 참조)
+        // 만약 indefinite_move_out 이면 null
+        $endDate = $tenant->indefinite_move_out ? null : ($tenant->move_out_date ? $tenant->move_out_date->format('Y-m-d') : null);
+        
+        // endDate가 null인데 indefinite가 아니면 startDate와 동일하게 (기존 로직 유지)
+        if (!$endDate && !$tenant->indefinite_move_out) {
+             $endDate = $startDate;
+        }
+
+
+        // 바로 배정
+        $this->assignTenantDirectly($this->pendingAssignmentRoomId, $this->selectedWaitingTenantId, $startDate, $endDate);
+
+        // 상태 초기화 및 모달 닫기
+        $this->cancelPendingAssignment();
+    }
+
+    public function cancelPendingAssignment()
+    {
+        $this->showAssignmentConfirmation = false;
+        $this->pendingAssignmentRoomId = null;
+        
+        // 모바일 배정 상태 초기화
+        $this->selectedScheduleRoomId = null;
+        $this->selectedScheduleDate = null;
+    }
+
     public function assignTenantDirectly($roomId, $tenantId, $startDate, $endDate)
     {
         $room = Room::findOrFail($roomId);
@@ -377,22 +502,39 @@ class ListTenants extends Page
             ->send();
 
         // 화면 갱신 이벤트 발송
+
+        // 선택 상태 초기화 (활성화된 카드 비활성화를 위해)
+        $this->selectedWaitingTenantId = null;
         $this->dispatch('tenant-created');
 
-        // 페이지 전체 새로고침
-        $this->js('
-            setTimeout(() => {
-                window.location.reload();
-            }, 500);
-        ');
+        // 페이지 전체 새로고침 (제거함: 탭 상태 유지를 위해 Livewire 리렌더링만 사용)
+        // $this->js('
+        //     setTimeout(() => {
+        //         window.location.reload();
+        //     }, 500);
+        // ');
     }
 
     /**
      * 호실에서 입주자 제거 (대기자 목록으로 복귀)
      */
+    public $showRemoveConfirmation = false;
+    public $pendingRemovalTenantId = null;
+
     public function removeTenantFromRoom($tenantId)
     {
-        $tenant = Tenant::findOrFail($tenantId);
+        // 확인 모달 표시
+        $this->pendingRemovalTenantId = $tenantId;
+        $this->showRemoveConfirmation = true;
+    }
+
+    public function confirmRemoveTenant()
+    {
+        if (!$this->pendingRemovalTenantId) {
+            return;
+        }
+
+        $tenant = Tenant::findOrFail($this->pendingRemovalTenantId);
         $roomId = $tenant->room_id; // room_id를 미리 저장
 
         // room_id를 null로 설정하여 대기자 목록으로 복귀
@@ -420,13 +562,26 @@ class ListTenants extends Page
             ->title('입주자가 대기자 목록으로 이동되었습니다')
             ->success()
             ->send();
+
+        // 확인 모달 닫기
+        $this->showRemoveConfirmation = false;
+        $this->pendingRemovalTenantId = null;
     }
+
+    public function cancelRemoveTenant()
+    {
+        $this->showRemoveConfirmation = false;
+        $this->pendingRemovalTenantId = null;
+    }
+
+    public $showAssignmentConfirmation = false;
+    public $pendingAssignmentRoomId = null;
 
     /**
      * 입주자 생성 이벤트 리스너 - 화면 새로고침
      */
-    #[On('tenant-created')]
-    public function refreshAfterTenantCreated()
+    #[On('refresh-tenants')]
+    public function refreshTenants()
     {
         // Livewire 컴포넌트 자동 리렌더링
         // 아무것도 하지 않아도 리렌더링됨

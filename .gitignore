@@ -18,3 +18,8 @@ yarn-error.log
 /.idea
 /.vscode
 /.claude
+
+# handover: exclude secrets/junk
+.env.backup*
+*.bak
+/temp

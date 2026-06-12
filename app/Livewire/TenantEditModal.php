@@ -34,11 +34,9 @@ class TenantEditModal extends Component
         $this->moveInDate = $tenant->move_in_date?->format('Y-m-d');
         $this->indefiniteMoveOut = $tenant->indefinite_move_out ?? false;
 
-        // 퇴실일 미정이면 입실일 이후 날짜로 표시
+        // 퇴실일 미정이면 입력 필드는 비우고(placeholder 표시), DB에도 null 유지
         if ($this->indefiniteMoveOut) {
-            // 입실일이 미래면 입실일과 동일하게, 아니면 오늘 날짜로
-            $moveInDate = $tenant->move_in_date ? \Carbon\Carbon::parse($tenant->move_in_date) : now();
-            $this->moveOutDate = $moveInDate->isFuture() ? $moveInDate->format('Y-m-d') : now()->format('Y-m-d');
+            $this->moveOutDate = null;
         } else {
             $this->moveOutDate = $tenant->move_out_date?->format('Y-m-d');
         }
@@ -53,11 +51,9 @@ class TenantEditModal extends Component
 
     public function updatedIndefiniteMoveOut($value)
     {
-        // 퇴실일 미정 체크박스가 체크되면 입실일 이후 날짜로 설정
+        // 퇴실일 미정 체크 시 값을 비워 placeholder(----.--. --.) 가 보이도록 함
         if ($value) {
-            // 입실일이 미래면 입실일과 동일하게, 아니면 오늘 날짜로
-            $moveInDate = $this->moveInDate ? \Carbon\Carbon::parse($this->moveInDate) : now();
-            $this->moveOutDate = $moveInDate->isFuture() ? $moveInDate->format('Y-m-d') : now()->format('Y-m-d');
+            $this->moveOutDate = null;
         }
     }
 
@@ -82,7 +78,9 @@ class TenantEditModal extends Component
     {
         $rules = [
             'moveInDate' => 'required|date',
-            'moveOutDate' => 'required|date|after_or_equal:moveInDate',
+            'moveOutDate' => $this->indefiniteMoveOut
+                ? 'nullable'
+                : 'required|date|after_or_equal:moveInDate',
             'paymentStatus' => 'required|in:paid,pending,overdue,waiting',
         ];
 
@@ -105,10 +103,12 @@ class TenantEditModal extends Component
             'payment_status' => $tenant->payment_status,
         ]);
 
+        $effectiveMoveOutDate = $this->indefiniteMoveOut ? null : $this->moveOutDate;
+
         // 입주자 정보 업데이트 (날짜와 결제 상태, 단기숙박 정보)
         $tenant->update([
             'move_in_date' => $this->moveInDate,
-            'move_out_date' => $this->moveOutDate,
+            'move_out_date' => $effectiveMoveOutDate,
             'indefinite_move_out' => $this->indefiniteMoveOut,
             'payment_status' => $this->paymentStatus,
             'is_short_term' => $this->isShortTerm,
@@ -122,7 +122,7 @@ class TenantEditModal extends Component
             if ($room) {
                 $room->update([
                     'move_in_date' => $this->moveInDate,
-                    'move_out_date' => $this->moveOutDate,
+                    'move_out_date' => $effectiveMoveOutDate,
                 ]);
             }
         }

@@ -100,6 +100,40 @@ class TenantForm
                             ->required(),
                     ])->columns(3),
 
+                Section::make('사업자 정보 (세금계산서 발행용)')
+                    ->description('사업자 입주자 대상으로 전자세금계산서를 발행할 때 사용됩니다.')
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\TextInput::make('business_number')
+                            ->label('사업자등록번호')
+                            ->mask('999-99-99999')
+                            ->placeholder('예: 123-45-67890')
+                            ->dehydrateStateUsing(fn ($state) => $state ? preg_replace('/\D/', '', $state) : null)
+                            ->rule('regex:/^\d{3}-?\d{2}-?\d{5}$/')
+                            ->validationMessages(['regex' => '올바른 사업자등록번호 형식이 아닙니다.'])
+                            ->maxLength(12),
+                        Forms\Components\TextInput::make('corp_name')
+                            ->label('상호(법인명)')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('corp_ceo_name')
+                            ->label('대표자명')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('email')
+                            ->label('담당자 이메일')
+                            ->email()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('corp_address')
+                            ->label('사업장 주소')
+                            ->maxLength(255)
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('corp_business_type')
+                            ->label('업태')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('corp_business_class')
+                            ->label('업종')
+                            ->maxLength(255),
+                    ])->columns(2),
+
                 Section::make('블랙리스트')
                     ->schema([
                         Forms\Components\Toggle::make('is_blacklisted')

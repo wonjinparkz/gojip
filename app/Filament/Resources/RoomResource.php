@@ -47,7 +47,14 @@ class RoomResource extends Resource
                     ->label('호실 번호')
                     ->required()
                     ->maxLength(255)
-                    ->placeholder('예: 201, 202'),
+                    ->placeholder('예: 201, 202')
+                    ->unique('rooms', 'room_number', ignoreRecord: true, modifyRuleUsing: function ($rule, \Filament\Forms\Get $get) {
+                        return $rule->where('branch_id', $get('branch_id'))
+                                    ->where('room_type', $get('room_type'));
+                    })
+                    ->validationMessages([
+                        'unique' => '중복된 호실 번호입니다. 해당 호실 번호와 타입이 이미 존재합니다',
+                    ]),
                 Forms\Components\TextInput::make('floor')
                     ->label('층수')
                     ->required()
@@ -148,7 +155,14 @@ class RoomResource extends Resource
                             ->label('호실 번호')
                             ->required()
                             ->maxLength(255)
-                            ->placeholder('예: 201, 202'),
+                            ->placeholder('예: 201, 202')
+                            ->unique('rooms', 'room_number', ignoreRecord: true, modifyRuleUsing: function ($rule, \Filament\Forms\Get $get) {
+                                return $rule->where('branch_id', $get('branch_id'))
+                                            ->where('room_type', $get('room_type'));
+                            })
+                            ->validationMessages([
+                                'unique' => '중복된 호실 번호입니다. 해당 호실 번호와 타입이 이미 존재합니다',
+                            ]),
                         Forms\Components\TextInput::make('floor')
                             ->label('층수')
                             ->required()
@@ -205,6 +219,15 @@ class RoomResource extends Resource
                     ->stickyModalHeader()
                     ->stickyModalFooter()
                     ->closeModalByClickingAway(false),
+
+                Tables\Actions\DeleteAction::make()
+                    ->label('삭제')
+                    ->icon('heroicon-o-trash')
+                    ->modalHeading('호실 삭제 확인')
+                    ->modalDescription(new \Illuminate\Support\HtmlString('정말로 해당 호실을 삭제하시겠어요?<br>삭제 후에는 되돌릴 수 없어요.'))
+                    ->modalSubmitActionLabel('예')
+                    ->modalCancelActionLabel('아니오')
+                    ->color('danger'),
             ])
             ->bulkActions([])
             ->paginated([12, 24, 48, 'all'])

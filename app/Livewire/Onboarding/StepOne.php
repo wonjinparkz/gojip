@@ -10,28 +10,41 @@ class StepOne extends Component
 
     protected $rules = [
         'branches.*.name' => 'required|string|max:255',
-        'branches.*.start_floor' => 'required|integer',
-        'branches.*.end_floor' => 'required|integer|gte:branches.*.start_floor',
+        'branches.*.selected_floors' => 'required_without:branches.*.custom_floors|array',
+        'branches.*.custom_floors' => 'nullable|string',
     ];
 
     protected $messages = [
         'branches.*.name.required' => '지점명을 입력해주세요.',
-        'branches.*.start_floor.required' => '시작층을 입력해주세요.',
-        'branches.*.end_floor.required' => '끝층을 입력해주세요.',
-        'branches.*.end_floor.gte' => '끝층은 시작층보다 크거나 같아야 합니다.',
+        'branches.*.selected_floors.required_without' => '고시원이 위치한 층을 선택하거나 입력해주세요.',
     ];
 
-    public function mount()
+    public function mount($branches = [])
     {
-        // Initialize with one branch
-        $this->branches = [
-            ['name' => '', 'start_floor' => 1, 'end_floor' => 3]
-        ];
+        // Restore branches from parent if available, otherwise initialize with one branch
+        if (!empty($branches)) {
+            // Need to restore the UI state for branches that were already processed
+            $this->branches = array_map(function($branch) {
+                return [
+                    'name' => $branch['name'] ?? '',
+                    'selected_floors' => $branch['floors'] ?? [],
+                    'custom_floors' => '',
+                    'show_custom_input' => false
+                ];
+            }, $branches);
+        } else {
+            $this->addBranch();
+        }
     }
 
     public function addBranch()
     {
-        $this->branches[] = ['name' => '', 'start_floor' => 1, 'end_floor' => 3];
+        $this->branches[] = [
+            'name' => '', 
+            'selected_floors' => [], 
+            'custom_floors' => '',
+            'show_custom_input' => false
+        ];
     }
 
     public function removeBranch($index)
@@ -40,10 +53,54 @@ class StepOne extends Component
         $this->branches = array_values($this->branches);
     }
 
+    public function toggleFloor($branchIndex, $floor)
+    {
+        $selectedFloors = $this->branches[$branchIndex]['selected_floors'];
+        if (in_array($floor, $selectedFloors)) {
+            $this->branches[$branchIndex]['selected_floors'] = array_diff($selectedFloors, [$floor]);
+        } else {
+            $this->branches[$branchIndex]['selected_floors'][] = $floor;
+        }
+    }
+
+    public function previousStep()
+    {
+        $this->dispatch('previousStep');
+    }
+
     public function nextStep()
     {
         $this->validate();
-        $this->dispatch('saveBranches', branches: $this->branches);
+
+        $processedBranches = array_map(function($branch) {
+            // Parse custom floors
+            $customFloors = [];
+            if ($branch['show_custom_input'] && !empty($branch['custom_floors'])) {
+                // Remove whitespace and split by comma
+                $cleanInput = preg_replace('/\s+/', '', $branch['custom_floors']);
+                $customFloors = array_filter(explode(',', $cleanInput), function($val) {
+                    return is_numeric($val);
+                });
+                $customFloors = array_map('intval', $customFloors);
+            }
+
+            // Merge and unique
+            $allFloors = array_unique(array_merge($branch['selected_floors'], $customFloors));
+            sort($allFloors);
+
+            if (empty($allFloors)) {
+                $allFloors = [1]; // Fallback
+            }
+
+            return [
+                'name' => $branch['name'],
+                'floors' => $allFloors,
+                'start_floor' => min($allFloors),
+                'end_floor' => max($allFloors),
+            ];
+        }, $this->branches);
+
+        $this->dispatch('saveBranches', branches: $processedBranches);
     }
 
     public function render()
